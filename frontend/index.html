@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multi-Calendar App</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- React & ReactDOM -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+    <!-- Babel -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    
+    <style>
+        body { background-color: #f3f4f6; font-family: 'Inter', sans-serif; }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .fade-in { animation: fadeIn 0.3s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useMemo } = React;
+
+        // --- MOCK SERVICE FALLBACK (Per permettere l'esecuzione senza Docker in preview) ---
+        const API_BASE = 'http://localhost:5000/api';
+        let isMockMode = false;
+        
+        const mockDB = {
+            users: [{ id: 1, username: 'demo', password: 'password' }],
+            calendars: [
+                { id: 101, user_id: 1, type: 'Ufficio' },
+                { id: 102, user_id: 1, type: 'Personale' },
+                { id: 103, user_id: 1, type: 'Padre Pio' }
+            ],
+            events: [
+                { id: 1, calendar_id: 101, title: 'Riunione Team', event_date: new Date().toISOString().split('T')[0], event_time: '10:00', description: 'Allineamento settimanale' },
+                { id: 2, calendar_id: 102, title: 'Palestra', event_date: new Date().toISOString().split('T')[0], event_time: '18:30', description: 'Scheda forza' }
+            ]
+        };
+
+        const pensieriMock = [
+            "Prega, spera e non agitarti. L'agitazione non giova a nulla.",
+            "La preghiera è la migliore arma che abbiamo.",
+            "Il Signore è con te nelle tue battaglie quotidiane."
+        ];
+
+        async function fetchAPI(endpoint, options = {}) {
+            if (!isMockMode) {
+                try {
+                    const res = await fetch(`${API_BASE}${endpoint}`, {
+                        ...options,
+                        headers: { 'Content-Type': 'application/json', ...options.headers }
+                    });
+                    if (!res.ok) throw new Error('API Error');
+                    return await res.json();
+                } catch (e) {
+                    console.warn("Backend Docker non rilevato. Attivazione Mock Mode per l'anteprima.");
+                    isMockMode = true;
+                }
+            }
+
+            // Mock Logic
+            return new Promise((resolve, reject) => {
+                setTimeout(() => {
+                    const method = options.method || 'GET';
+                    
+                    if (endpoint === '/auth/login' && method === 'POST') {
+                        resolve({ token: 'mock-jwt-token', username: 'Utente Demo', userId: 1 });
+                    }
+                    else if (endpoint === '/calendars' && method === 'GET') {
+                        resolve(mockDB.calendars);
+                    }
+                    else if (endpoint.startsWith('/events/') && method === 'GET') {
+                        const calId = parseInt(endpoint.split('/').pop());
+                        resolve(mockDB.events.filter(e => e.calendar_id === calId));
+                    }
+                    else if (endpoint === '/events' && method === 'POST') {
+                        const newEvent = { id: Date.now(), ...JSON.parse(options.body) };
+                        mockDB.events.push(newEvent);
+                        resolve({ message: 'Creato', id: newEvent.id });
+                    }
+                    else if (endpoint.startsWith('/padrepio/thought/')) {
+                        const date = endpoint.split('/').pop();
+                        const thought = pensieriMock[date.charCodeAt(date.length-1) % pensieriMock.length];
+                        resolve({ date, thought });
+                    }
+                    else {
+                        reject(new Error("Mock endpoint non trovato"));
+                    }
+                }, 300); // Ritardo simulato
+            });
+        }
+        // --- FINE MOCK SERVICE ---
+
+
+        // Componente Principale
+        function App() {
+            const [user, setUser] = useState(null);
+            const [token, setToken] = useState(null);
+
+            if (!user) {
+                return <Login setAuth={(u, t) => { setUser(u); setToken(t); }} />;
+            }
+
+            return <Dashboard user={user} token={token} onLogout={() => { setUser(null); setToken(null); }} />;
+        }
+
+        // Componente Login
+        function Login({ setAuth }) {
+            const [isLogin, setIsLogin] = useState(true);
+            const [username, setUsername] = useState('');
+            const [password, setPassword] = useState('');
+            const [loading, setLoading] = useState(false);
+
+            const handleSubmit = async (e) => {
+                e.preventDefault();
+                setLoading(true);
+                try {
+                    const endpoint = isLogin ? '/auth/login' : '/auth/register';
+                    const data = await fetchAPI(endpoint, {
+                        method: 'POST',
+                        body: JSON.stringify({ username, password })
+                    });
+                    if (isLogin) {
+                        setAuth(data.username, data.token);
+                    } else {
+                        alert("Registrazione completata. Ora puoi fare login.");
+                        setIsLogin(true);
+                    }
+                } catch (err) {
+                    alert("Errore di connessione o credenziali errate.");
+                } finally {
+                    setLoading(false);
+                }
+            };
+
+            return (
+                <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
+                    <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md fade-in">
+                        <div className="flex justify-center mb-6 text-indigo-600">
+                            <i className="ph ph-calendar-check text-6xl"></i>
+                        </div>
+                        <h2 className="text-2xl font-bold text-center text-gray-800 mb-8">
+                            {isLogin ? 'Accedi ai tuoi Calendari' : 'Crea un Account'}
+                        </h2>
+                        <form onSubmit={handleSubmit} className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700">Username</label>
+                                <input type="text" required value={username} onChange={e => setUsername(e.target.value)}
+                                    className="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500" />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700">Password</label>
+                                <input type="password" required value={password} onChange={e => setPassword(e.target.value)}
+                                    className="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500" />
+                            </div>
+                            <button type="submit" disabled={loading}
+                                className="w-full bg-indigo-600 text-white py-2 rounded-lg hover:bg-indigo-700 transition font-medium">
+                                {loading ? 'Caricamento...' : (isLogin ? 'Entra' : 'Registrati')}
+                            </button>
+                        </form>
+                        <p className="mt-4 text-center text-sm text-gray-600">
+                            {isLogin ? "Non hai un account? " : "Hai già un account? "}
+                            <button onClick={() => setIsLogin(!isLogin)} className="text-indigo-600 font-semibold hover:underline">
+                                {isLogin ? 'Registrati' : 'Accedi'}
+                            </button>
+                        </p>
+                        <div className="mt-6 p-4 bg-yellow-50 text-yellow-800 rounded-lg text-xs text-center border border-yellow-200">
+                            <strong>Nota Anteprima:</strong> Inserisci username "demo" e clicca Entra per usare i dati fittizi.
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        // Dashboard Calendario
+        function Dashboard({ user, token, onLogout }) {
+            const [calendars, setCalendars] = useState([]);
+            const [activeCalId, setActiveCalId] = useState(null);
+            const [events, setEvents] = useState([]);
+            const [view, setView] = useState('Mese'); // Giorno, Mese, Anno
+            const [currentDate, setCurrentDate] = useState(new Date());
+            
+            // Per il modale nuovo evento
+            const [showModal, setShowModal] = useState(false);
+            const [selectedDate, setSelectedDate] = useState('');
+
+            // Padre Pio State
+            const [padrePioThought, setPadrePioThought] = useState('');
+
+            useEffect(() => {
+                loadCalendars();
+            }, []);
+
+            useEffect(() => {
+                if (activeCalId) loadEvents(activeCalId);
+            }, [activeCalId, currentDate, view]);
+
+            const loadCalendars = async () => {
+                const data = await fetchAPI('/calendars', { headers: { 'Authorization': `Bearer ${token}` } });
+                setCalendars(data);
+                if (data.length > 0) setActiveCalId(data[0].id);
+            };
+
+            const loadEvents = async (calId) => {
+                const data = await fetchAPI(`/events/${calId}`, { headers: { 'Authorization': `Bearer ${token}` } });
+                setEvents(data);
+
+                // Fetch pensiero se è Padre Pio
+                const activeCal = calendars.find(c => c.id === calId);
+                if (activeCal && activeCal.type === 'Padre Pio') {
+                    const dateStr = currentDate.toISOString().split('T')[0];
+                    const thoughtData = await fetchAPI(`/padrepio/thought/${dateStr}`, { headers: { 'Authorization': `Bearer ${token}` } });
+                    setPadrePioThought(thoughtData.thought);
+                } else {
+                    setPadrePioThought('');
+                }
+            };
+
+            const activeCalendar = calendars.find(c => c.id === activeCalId);
+
+            // Helpers per il calendario
+            const getDaysInMonth = (year, month) => new Date(year, month + 1, 0).getDate();
+            const getFirstDayOfMonth = (year, month) => new Date(year, month, 1).getDay();
+
+            const renderMese = () => {
+                const year = currentDate.getFullYear();
+                const month = currentDate.getMonth();
+                const daysInMonth = getDaysInMonth(year, month);
+                const firstDay = getFirstDayOfMonth(year, month);
+                const days = [];
+
+                // Celle vuote prima del 1° giorno
+                for (let i = 0; i < (firstDay === 0 ? 6 : firstDay - 1); i++) {
+                    days.push(<div key={`empty-${i}`} className="bg-gray-50 border border-gray-100 p-2 opacity-50"></div>);
+                }
+
+                // Giorni del mese
+                for (let d = 1; d <= daysInMonth; d++) {
+                    const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+                    const dayEvents = events.filter(e => e.event_date.startsWith(dateStr));
+                    const isToday = new Date().toISOString().split('T')[0] === dateStr;
+
+                    days.push(
+                        <div key={d} 
+                             className={`min-h-[100px] bg-white border border-gray-200 p-2 cursor-pointer hover:bg-blue-50 transition ${isToday ? 'ring-2 ring-indigo-500 rounded-lg' : ''}`}
+                             onClick={() => { setSelectedDate(dateStr); setShowModal(true); }}>
+                            <div className={`text-sm font-semibold mb-1 ${isToday ? 'text-indigo-600' : 'text-gray-700'}`}>{d}</div>
+                            <div className="space-y-1">
+                                {dayEvents.map(ev => (
+                                    <div key={ev.id} className="text-xs bg-indigo-100 text-indigo-800 px-1.5 py-0.5 rounded truncate" title={ev.title}>
+                                        {ev.event_time ? `${ev.event_time.substring(0,5)} ` : ''}{ev.title}
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    );
+                }
+
+                return (
+                    <div className="w-full h-full fade-in">
+                        <div className="grid grid-cols-7 gap-px bg-gray-200 mb-px rounded-t-lg overflow-hidden">
+                            {['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab', 'Dom'].map(d => (
+                                <div key={d} className="bg-gray-100 text-center py-2 text-sm font-semibold text-gray-600 uppercase">{d}</div>
+                            ))}
+                        </div>
+                        <div className="grid grid-cols-7 gap-px bg-gray-200 rounded-b-lg overflow-hidden">
+                            {days}
+                        </div>
+                    </div>
+                );
+            };
+
+            const renderGiorno = () => {
+                const dateStr = currentDate.toISOString().split('T')[0];
+                const dayEvents = events.filter(e => e.event_date.startsWith(dateStr));
+                
+                return (
+                    <div className="bg-white rounded-xl shadow p-6 fade-in min-h-[400px]">
+                        <h3 className="text-2xl font-bold text-gray-800 border-b pb-4 mb-4">
+                            {currentDate.toLocaleDateString('it-IT', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                        </h3>
+                        {dayEvents.length === 0 ? (
+                            <p className="text-gray-500 text-center py-8">Nessun evento per questa giornata.</p>
+                        ) : (
+                            <ul className="space-y-4">
+                                {dayEvents.map(ev => (
+                                    <li key={ev.id} className="flex border-l-4 border-indigo-500 bg-gray-50 p-4 rounded-r-lg shadow-sm">
+                                        <div className="font-bold text-indigo-600 w-20 flex-shrink-0">
+                                            {ev.event_time ? ev.event_time.substring(0,5) : 'Tutto il gg'}
+                                        </div>
+                                        <div>
+                                            <h4 className="font-semibold text-gray-800">{ev.title}</h4>
+                                            {ev.description && <p className="text-sm text-gray-600 mt-1">{ev.description}</p>}
+                                        </div>
+                                    </li>
+                                ))}
+                            </ul>
+                        )}
+                        <button onClick={() => { setSelectedDate(dateStr); setShowModal(true); }}
+                            className="mt-6 flex items-center text-indigo-600 font-semibold hover:text-indigo-800">
+                            <i className="ph ph-plus-circle text-xl mr-2"></i> Aggiungi Evento
+                        </button>
+                    </div>
+                );
+            };
+
+            // Simplified Year View
+            const renderAnno = () => {
+                return (
+                    <div className="bg-white rounded-xl shadow p-8 text-center fade-in">
+                        <h3 className="text-3xl font-bold text-gray-800 mb-4">{currentDate.getFullYear()}</h3>
+                        <p className="text-gray-500 mb-8">Vista annuale semplificata. Seleziona un mese per i dettagli.</p>
+                        <div className="grid grid-cols-3 md:grid-cols-4 gap-4">
+                            {Array.from({length: 12}).map((_, i) => (
+                                <div key={i} 
+                                    onClick={() => {
+                                        const newD = new Date(currentDate); newD.setMonth(i); setCurrentDate(newD); setView('Mese');
+                                    }}
+                                    className="p-4 border rounded-lg hover:bg-indigo-50 hover:border-indigo-300 cursor-pointer transition">
+                                    <div className="font-semibold text-gray-700">
+                                        {new Date(2020, i, 1).toLocaleDateString('it-IT', { month: 'long' })}
+                                    </div>
+                                    <div className="text-xs text-gray-400 mt-2">
+                                        {events.filter(e => {
+                                            const eDate = new Date(e.event_date);
+                                            return eDate.getFullYear() === currentDate.getFullYear() && eDate.getMonth() === i;
+                                        }).length} Eventi
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                );
+            };
+
+            const changeMonth = (offset) => {
+                const newDate = new Date(currentDate);
+                newDate.setMonth(currentDate.getMonth() + offset);
+                setCurrentDate(newDate);
+            };
+            
+            const changeDay = (offset) => {
+                const newDate = new Date(currentDate);
+                newDate.setDate(currentDate.getDate() + offset);
+                setCurrentDate(newDate);
+            };
+            
+            const changeYear = (offset) => {
+                const newDate = new Date(currentDate);
+                newDate.setFullYear(currentDate.getFullYear() + offset);
+                setCurrentDate(newDate);
+            };
+
+            const handlePrev = () => {
+                if (view === 'Mese') changeMonth(-1);
+                if (view === 'Giorno') changeDay(-1);
+                if (view === 'Anno') changeYear(-1);
+            };
+
+            const handleNext = () => {
+                if (view === 'Mese') changeMonth(1);
+                if (view === 'Giorno') changeDay(1);
+                if (view === 'Anno') changeYear(1);
+            };
+
+            return (
+                <div className="flex h-screen bg-gray-50 overflow-hidden">
+                    {/* Sidebar */}
+                    <div className="w-64 bg-white border-r shadow-sm flex flex-col z-10">
+                        <div className="p-6 border-b flex items-center space-x-3">
+                            <div className="bg-indigo-600 text-white p-2 rounded-lg">
+                                <i className="ph ph-calendar-duotone text-2xl"></i>
+                            </div>
+                            <span className="font-bold text-xl text-gray-800">Calendari</span>
+                        </div>
+                        
+                        <div className="p-4 flex-1 overflow-y-auto">
+                            <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">I Miei Calendari</h3>
+                            <div className="space-y-2">
+                                {calendars.map(cal => (
+                                    <button 
+                                        key={cal.id}
+                                        onClick={() => setActiveCalId(cal.id)}
+                                        className={`w-full flex items-center px-4 py-3 rounded-xl transition ${activeCalId === cal.id ? 'bg-indigo-50 text-indigo-700 font-semibold ring-1 ring-indigo-200' : 'text-gray-600 hover:bg-gray-50'}`}
+                                    >
+                                        <i className={`ph text-xl mr-3 ${
+                                            cal.type === 'Ufficio' ? 'ph-briefcase' : 
+                                            cal.type === 'Personale' ? 'ph-user' : 'ph-cross'
+                                        }`}></i>
+                                        {cal.type}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div className="p-4 border-t">
+                            <div className="flex items-center justify-between">
+                                <span className="text-sm font-medium text-gray-700 truncate"><i className="ph ph-user-circle mr-2"></i>{user}</span>
+                                <button onClick={onLogout} className="text-gray-400 hover:text-red-500" title="Esci">
+                                    <i className="ph ph-sign-out text-xl"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Main Content */}
+                    <div className="flex-1 flex flex-col min-w-0">
+                        {/* Header */}
+                        <header className="bg-white border-b px-8 py-4 flex items-center justify-between z-0 shadow-sm">
+                            <div className="flex items-center space-x-4">
+                                <button onClick={handlePrev} className="p-2 rounded-full hover:bg-gray-100"><i className="ph ph-caret-left"></i></button>
+                                <h2 className="text-2xl font-bold text-gray-800 w-48 text-center capitalize">
+                                    {view === 'Mese' && currentDate.toLocaleDateString('it-IT', { month: 'long', year: 'numeric' })}
+                                    {view === 'Giorno' && currentDate.toLocaleDateString('it-IT', { day: '2-digit', month: 'long' })}
+                                    {view === 'Anno' && currentDate.getFullYear()}
+                                </h2>
+                                <button onClick={handleNext} className="p-2 rounded-full hover:bg-gray-100"><i className="ph ph-caret-right"></i></button>
+                                
+                                <button onClick={() => setCurrentDate(new Date())} className="ml-4 px-3 py-1 text-sm bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200 transition font-medium">
+                                    Oggi
+                                </button>
+                            </div>
+
+                            <div className="flex bg-gray-100 p-1 rounded-lg">
+                                {['Giorno', 'Mese', 'Anno'].map(v => (
+                                    <button key={v} onClick={() => setView(v)}
+                                        className={`px-4 py-1.5 text-sm rounded-md transition font-medium ${view === v ? 'bg-white text-indigo-700 shadow' : 'text-gray-500 hover:text-gray-700'}`}>
+                                        {v}
+                                    </button>
+                                ))}
+                            </div>
+                        </header>
+
+                        {/* Padre Pio Banner */}
+                        {activeCalendar?.type === 'Padre Pio' && padrePioThought && (
+                            <div className="bg-[#fdf6e3] border-b border-[#e9e1c3] px-8 py-4 flex items-start space-x-4 shadow-inner fade-in">
+                                <div className="bg-[#d4c19c] text-white p-2 rounded-full mt-1">
+                                    <i className="ph ph-quotes text-xl"></i>
+                                </div>
+                                <div>
+                                    <h4 className="text-sm font-bold text-[#8a7b5d] uppercase tracking-wider mb-1">Pensiero del Giorno</h4>
+                                    <p className="text-lg font-serif text-[#5c5036] italic leading-relaxed">"{padrePioThought}"</p>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Calendar View Area */}
+                        <div className="flex-1 p-6 overflow-y-auto">
+                            <div className="max-w-6xl mx-auto h-full">
+                                {view === 'Mese' && renderMese()}
+                                {view === 'Giorno' && renderGiorno()}
+                                {view === 'Anno' && renderAnno()}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Modale Nuovo Evento */}
+                    {showModal && (
+                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 fade-in">
+                            <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-md">
+                                <div className="flex justify-between items-center mb-6">
+                                    <h3 className="text-xl font-bold">Nuovo Evento</h3>
+                                    <button onClick={() => setShowModal(false)} className="text-gray-400 hover:text-gray-600"><i className="ph ph-x text-xl"></i></button>
+                                </div>
+                                <form onSubmit={async (e) => {
+                                    e.preventDefault();
+                                    const fd = new FormData(e.target);
+                                    const data = {
+                                        calendar_id: activeCalId,
+                                        title: fd.get('title'),
+                                        event_date: fd.get('date'),
+                                        event_time: fd.get('time') || null,
+                                        description: fd.get('desc') || ''
+                                    };
+                                    try {
+                                        await fetchAPI('/events', { method: 'POST', body: JSON.stringify(data), headers: { 'Authorization': `Bearer ${token}` }});
+                                        setShowModal(false);
+                                        loadEvents(activeCalId); // Refresh
+                                    } catch (err) { alert('Errore salvataggio'); }
+                                }}>
+                                    <div className="space-y-4">
+                                        <div><label className="block text-sm font-medium">Titolo *</label><input name="title" required className="w-full mt-1 p-2 border rounded" /></div>
+                                        <div className="flex space-x-4">
+                                            <div className="flex-1"><label className="block text-sm font-medium">Data *</label><input name="date" type="date" required defaultValue={selectedDate} className="w-full mt-1 p-2 border rounded" /></div>
+                                            <div className="w-1/3"><label className="block text-sm font-medium">Ora</label><input name="time" type="time" className="w-full mt-1 p-2 border rounded" /></div>
+                                        </div>
+                                        <div><label className="block text-sm font-medium">Descrizione</label><textarea name="desc" rows="3" className="w-full mt-1 p-2 border rounded"></textarea></div>
+                                        <div className="pt-4 flex justify-end space-x-3">
+                                            <button type="button" onClick={() => setShowModal(false)} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded">Annulla</button>
+                                            <button type="submit" className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700">Salva Evento</button>
+                                        </div>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
