@@ -8,7 +8,6 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 
-// Configurazione DB
 const dbConfig = {
     host: process.env.DB_HOST || 'localhost',
     user: process.env.DB_USER || 'calendar_user',
@@ -27,7 +26,6 @@ async function initDB() {
 }
 initDB();
 
-// Middleware Autenticazione
 const authenticateToken = (req, res, next) => {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
@@ -44,8 +42,14 @@ const authenticateToken = (req, res, next) => {
 app.post('/api/auth/register', async (req, res) => {
     try {
         const { username, password } = req.body;
+        if (!username || !password) return res.status(400).json({ error: 'Dati mancanti' });
+
         const hashedPassword = await bcrypt.hash(password, 10);
-        const [result] = await pool.execute('INSERT INTO users (username, password) VALUES (?, ?)', [username, hashedPassword]);
+        
+        // PREPARED STATEMENT: I valori sono passati separatamente dalla stringa SQL
+        const query = 'INSERT INTO users (username, password) VALUES (?, ?)';
+        const [result] = await pool.execute(query, [username, hashedPassword]);
+        
         res.status(201).json({ message: 'Utente creato', userId: result.insertId });
     } catch (error) {
         res.status(500).json({ error: 'Errore registrazione. Username forse già in uso.' });
@@ -55,7 +59,10 @@ app.post('/api/auth/register', async (req, res) => {
 app.post('/api/auth/login', async (req, res) => {
     try {
         const { username, password } = req.body;
+        
+        // PREPARED STATEMENT
         const [rows] = await pool.execute('SELECT * FROM users WHERE username = ?', [username]);
+        
         if (rows.length === 0) return res.status(400).json({ error: 'Utente non trovato' });
 
         const user = rows[0];
@@ -72,6 +79,7 @@ app.post('/api/auth/login', async (req, res) => {
 // --- ROUTES CALENDARI & EVENTI ---
 app.get('/api/calendars', authenticateToken, async (req, res) => {
     try {
+        // PREPARED STATEMENT
         const [rows] = await pool.execute('SELECT * FROM calendars WHERE user_id = ?', [req.user.id]);
         res.json(rows);
     } catch (error) {
@@ -81,11 +89,20 @@ app.get('/api/calendars', authenticateToken, async (req, res) => {
 
 app.get('/api/events/:calendarId', authenticateToken, async (req, res) => {
     try {
-        // Verifica che il calendario appartenga all'utente
-        const [calCheck] = await pool.execute('SELECT * FROM calendars WHERE id = ? AND user_id = ?', [req.params.calendarId, req.user.id]);
+        const { calendarId } = req.params;
+
+        // Verifica proprietà con PREPARED STATEMENT
+        const [calCheck] = await pool.execute(
+            'SELECT id FROM calendars WHERE id = ? AND user_id = ?', 
+            [calendarId, req.user.id]
+        );
+        
         if (calCheck.length === 0) return res.status(403).json({ error: 'Accesso negato al calendario' });
 
-        const [events] = await pool.execute('SELECT * FROM events WHERE calendar_id = ? ORDER BY event_date, event_time', [req.params.calendarId]);
+        const [events] = await pool.execute(
+            'SELECT * FROM events WHERE calendar_id = ? ORDER BY event_date, event_time', 
+            [calendarId]
+        );
         res.json(events);
     } catch (error) {
         res.status(500).json({ error: 'Errore recupero eventi' });
@@ -96,14 +113,24 @@ app.post('/api/events', authenticateToken, async (req, res) => {
     try {
         const { calendar_id, title, event_date, event_time, description } = req.body;
         
-        // Verifica proprietà
-        const [calCheck] = await pool.execute('SELECT * FROM calendars WHERE id = ? AND user_id = ?', [calendar_id, req.user.id]);
+        if (!calendar_id || !title || !event_date) {
+            return res.status(400).json({ error: 'Campi obbligatori mancanti' });
+        }
+
+        // Verifica proprietà con PREPARED STATEMENT
+        const [calCheck] = await pool.execute(
+            'SELECT id FROM calendars WHERE id = ? AND user_id = ?', 
+            [calendar_id, req.user.id]
+        );
+        
         if (calCheck.length === 0) return res.status(403).json({ error: 'Accesso negato' });
 
+        // Inserimento con PREPARED STATEMENT
         const [result] = await pool.execute(
             'INSERT INTO events (calendar_id, title, event_date, event_time, description) VALUES (?, ?, ?, ?, ?)',
             [calendar_id, title, event_date, event_time || null, description || '']
         );
+        
         res.status(201).json({ id: result.insertId, message: 'Evento creato' });
     } catch (error) {
         res.status(500).json({ error: 'Errore creazione evento' });
@@ -120,14 +147,12 @@ const pensieriPadrePio = [
 ];
 
 app.get('/api/padrepio/thought/:date', authenticateToken, (req, res) => {
-    // Usa la data per generare un indice pseudo-casuale ma deterministico per la giornata
-    const dateStr = req.params.date; // formato YYYY-MM-DD
+    const dateStr = req.params.date; 
     let hash = 0;
     for (let i = 0; i < dateStr.length; i++) {
         hash = dateStr.charCodeAt(i) + ((hash << 5) - hash);
     }
     const index = Math.abs(hash) % pensieriPadrePio.length;
-    
     res.json({ date: dateStr, thought: pensieriPadrePio[index] });
 });
 
