@@ -48,22 +48,24 @@ const authenticateToken = (req, res, next) => {
 // 1. Registrazione con Hashing
 app.post('/api/auth/register', async (req, res) => {
     try {
-        const { username, password } = req.body;
-        if (!username || !password) return res.status(400).json({ error: 'Dati incompleti' });
+        const { username, email, password } = req.body;
 
-        // Creazione Hash della password
+        if (!username || !email || !password) {
+            return res.status(400).json({ error: 'Dati incompleti' });
+        }
+
         const hashedPassword = await bcrypt.hash(password, 10);
 
-        // Prepared Statement per prevenire SQL Injection
         const [result] = await pool.execute(
-            'INSERT INTO users (username, password) VALUES (?, ?)',
-            [username, hashedPassword]
+            'INSERT INTO users (username, email, password) VALUES (?, ?, ?)',
+            [username, email, hashedPassword]
         );
 
         res.status(201).json({ message: 'Utente creato', userId: result.insertId });
+
     } catch (error) {
         if (error.code === 'ER_DUP_ENTRY') {
-            return res.status(400).json({ error: 'Username già esistente' });
+            return res.status(400).json({ error: 'Username o email già esistenti' });
         }
         res.status(500).json({ error: 'Errore durante la registrazione' });
     }
