@@ -1,5 +1,5 @@
-admin       admin@calendar.local            password
-mario       mario.rossi@test.local          password
-luisa       luisa.verdi@test.local          password
-diego       diego.turchetto@test.local      password
-daniele     daniele.gobbo@test.local        password
+admin       admin@calendar.local            password    password123
+mario       mario.rossi@test.local          password    password123
+luisa       luisa.verdi@test.local          password    password123
+diego       diego.turchetto@test.local      password    password123
+daniele     daniele.gobbo@test.local        password    password123
