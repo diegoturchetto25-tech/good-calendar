@@ -1,0 +1,5 @@
+admin       admin@calendar.local            password
+mario       mario.rossi@test.local          password
+luisa       luisa.verdi@test.local          password
+diego       diego.turchetto@test.local      password
+daniele     daniele.gobbo@test.local        password

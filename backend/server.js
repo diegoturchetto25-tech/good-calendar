@@ -42,20 +42,34 @@ async function initDB() {
     }
 }
 
-// Crea l'utente admin se non esiste (bcrypt non è eseguibile in SQL)
+// Crea l'utente admin e gli utenti di test se non esistono
 async function initAdminUser() {
-    const [rows] = await pool.execute(
-        'SELECT id FROM users WHERE email = ?', ['admin@calendar.local']
-    );
-    if (rows.length === 0) {
-        const hashed = await bcrypt.hash('password', 10);
-        await pool.execute(
-            'INSERT INTO users (username, email, password, role) VALUES (?, ?, ?, ?)',
-            ['admin', 'admin@calendar.local', hashed, 'admin']
-        );
-        console.log('✅ Utente admin creato — admin@calendar.local / password');
-    } else {
-        console.log('ℹ️  Utente admin già esistente.');
+    try {
+        const testUsers = [
+            { username: 'admin',   email: 'admin@calendar.local',  password: 'password', role: 'admin' },
+            { username: 'mario',   email: 'mario.rossi@test.local', password: 'password', role: 'user'  },
+            { username: 'luisa',   email: 'luisa.verdi@test.local', password: 'password', role: 'user'  },
+            { username: 'diego',   email: 'diego.turchetto@test.local', password: 'password', role: 'user' },
+            { username: 'daniele', email: 'daniele.gobbo@test.local',   password: 'password', role: 'user' },
+        ];
+
+        for (const u of testUsers) {
+            const [rows] = await pool.execute(
+                'SELECT id FROM users WHERE email = ?', [u.email]
+            );
+            if (rows.length === 0) {
+                const hashed = await bcrypt.hash(u.password, 10);
+                await pool.execute(
+                    'INSERT INTO users (username, email, password, role) VALUES (?, ?, ?, ?)',
+                    [u.username, u.email, hashed, u.role]
+                );
+                console.log(`✅ Utente creato — ${u.email} (${u.role})`);
+            } else {
+                console.log(`ℹ️  Utente già esistente — ${u.email}`);
+            }
+        }
+    } catch (err) {
+        console.error('⚠️  Errore creazione utenti di test (non fatale):', err.message);
     }
 }
 
@@ -346,7 +360,75 @@ app.post('/api/events', authenticateToken, async (req, res) => {
 });
 
 /**
- * DELETE /api/events/:eventId
+/**
+ * PUT /api/events/:eventId
+ * - Evento Ufficio: solo capo / admin
+ * - Evento Personale: solo il proprietario
+ */
+app.put('/api/events/:eventId', authenticateToken, async (req, res) => {
+    try {
+        const { eventId } = req.params;
+        const { title, event_date, event_time, event_end_time, description } = req.body;
+
+        if (!title || !event_date)
+            return res.status(400).json({ error: 'Titolo e data sono obbligatori.' });
+
+        // Recupera evento + info calendario
+        const [rows] = await pool.execute(
+            `SELECT e.*, c.is_global, c.user_id AS cal_owner
+             FROM events e JOIN calendars c ON e.calendar_id = c.id
+             WHERE e.id = ?`,
+            [eventId]
+        );
+        const event = rows[0];
+        if (!event) return res.status(404).json({ error: 'Evento non trovato.' });
+
+        // Controllo permessi
+        if (event.is_global) {
+            if (!['capo', 'admin'].includes(req.user.role))
+                return res.status(403).json({ error: 'Solo i Capo e gli Admin possono modificare eventi Ufficio.' });
+        } else {
+            if (event.cal_owner !== req.user.id)
+                return res.status(403).json({ error: 'Non puoi modificare eventi di un altro utente.' });
+        }
+
+        // Controllo sovrapposizione (esclude l'evento stesso)
+        if (event_time && event_end_time) {
+            if (event_time >= event_end_time)
+                return res.status(400).json({ error: "L'ora di fine deve essere successiva all'ora di inizio." });
+
+            const [overlapping] = await pool.execute(
+                `SELECT e.title, e.event_time, e.event_end_time, c.type AS calendar_type
+                 FROM events e JOIN calendars c ON e.calendar_id = c.id
+                 WHERE (c.user_id = ? OR c.is_global = TRUE)
+                   AND e.event_date = ?
+                   AND e.id != ?
+                   AND e.event_time IS NOT NULL AND e.event_end_time IS NOT NULL
+                   AND ? < e.event_end_time AND ? > e.event_time`,
+                [req.user.id, event_date, eventId, event_time, event_end_time]
+            );
+            if (overlapping.length > 0) {
+                const c = overlapping[0];
+                return res.status(400).json({
+                    error: `Conflitto orario: si sovrappone con "${c.title}" (${c.event_time.substring(0,5)}–${c.event_end_time.substring(0,5)}) nel calendario "${c.calendar_type}".`
+                });
+            }
+        }
+
+        await pool.execute(
+            `UPDATE events
+             SET title = ?, event_date = ?, event_time = ?, event_end_time = ?, description = ?
+             WHERE id = ?`,
+            [title, event_date, event_time || null, event_end_time || null, description || '', eventId]
+        );
+        res.json({ message: 'Evento aggiornato con successo.' });
+    } catch (error) {
+        console.error('Errore modifica evento:', error);
+        res.status(500).json({ error: "Errore interno durante la modifica dell'evento." });
+    }
+});
+
+/** DELETE /api/events/:eventId
  * - Evento Ufficio: solo capo / admin
  * - Evento Personale: solo il proprietario
  */

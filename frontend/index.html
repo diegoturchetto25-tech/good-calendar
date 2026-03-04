@@ -218,19 +218,28 @@ function ChangePasswordModal({ token, onClose }) {
     );
 }
 
-// ── New Event Modal ──────────────────────────────────────────
-function NewEventModal({ token, activeCalId, activeCalIsGlobal, userRole, selectedDate, onClose, onSaved }) {
+// ── Event Modal (crea e modifica) ───────────────────────────
+// editEvent: null = nuovo evento, oppure oggetto evento da modificare
+function EventModal({ token, activeCalId, activeCalIsGlobal, userRole, selectedDate, editEvent, onClose, onSaved }) {
+    const isEdit = !!editEvent;
     const [loading, setLoading] = useState(false);
-    const [error, setError] = useState('');
+    const [error, setError]     = useState('');
 
-    // Utenti normali non possono aggiungere eventi al calendario Ufficio
+    // Valori iniziali (modifica) o vuoti (nuovo)
+    const [title, setTitle]         = useState(editEvent?.title || '');
+    const [date, setDate]           = useState(editEvent?.event_date?.substring(0,10) || selectedDate);
+    const [time, setTime]           = useState(editEvent?.event_time?.substring(0,5) || '');
+    const [endTime, setEndTime]     = useState(editEvent?.event_end_time?.substring(0,5) || '');
+    const [description, setDesc]    = useState(editEvent?.description || '');
+
+    // Utenti normali non possono creare/modificare eventi Ufficio
     if (activeCalIsGlobal && !['capo', 'admin'].includes(userRole)) {
         return (
             <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 fade-in">
                 <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-md text-center">
                     <i className="ph ph-lock text-5xl text-amber-400 mb-4"></i>
                     <h3 className="text-xl font-bold text-gray-800 mb-2">Accesso limitato</h3>
-                    <p className="text-gray-500 mb-5">Solo i <strong>Capo</strong> e gli <strong>Admin</strong> possono aggiungere eventi al calendario Ufficio.</p>
+                    <p className="text-gray-500 mb-5">Solo i <strong>Capo</strong> e gli <strong>Admin</strong> possono modificare eventi Ufficio.</p>
                     <button onClick={onClose} className="px-5 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 font-medium transition">Chiudi</button>
                 </div>
             </div>
@@ -239,63 +248,72 @@ function NewEventModal({ token, activeCalId, activeCalIsGlobal, userRole, select
 
     const handleSubmit = async (e) => {
         e.preventDefault(); setError(''); setLoading(true);
-        const fd = new FormData(e.target);
         try {
-            await fetchAPI('/events', {
-                method: 'POST',
-                body: JSON.stringify({
-                    calendar_id: activeCalId,
-                    title: fd.get('title'),
-                    event_date: fd.get('date'),
-                    event_time: fd.get('time') || null,
-                    event_end_time: fd.get('end_time') || null,
-                    description: fd.get('desc') || ''
-                }),
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
+            if (isEdit) {
+                await fetchAPI(`/events/${editEvent.id}`, {
+                    method: 'PUT',
+                    body: JSON.stringify({ title, event_date: date, event_time: time || null, event_end_time: endTime || null, description }),
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+            } else {
+                await fetchAPI('/events', {
+                    method: 'POST',
+                    body: JSON.stringify({ calendar_id: activeCalId, title, event_date: date, event_time: time || null, event_end_time: endTime || null, description }),
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+            }
             onSaved(); onClose();
         } catch (err) { setError(err.message); }
         finally { setLoading(false); }
     };
+
+    const isOffice = isEdit ? editEvent.source === 'office' : activeCalIsGlobal;
 
     return (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 fade-in">
             <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-md">
                 <div className="flex justify-between items-center mb-5">
                     <h3 className="text-xl font-bold text-gray-800">
-                        {activeCalIsGlobal ? '📋 Nuovo Evento Ufficio' : '👤 Nuovo Evento Personale'}
+                        {isEdit
+                            ? (isOffice ? '✏️ Modifica Evento Ufficio' : '✏️ Modifica Evento Personale')
+                            : (isOffice ? '📋 Nuovo Evento Ufficio'   : '👤 Nuovo Evento Personale')}
                     </h3>
                     <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><i className="ph ph-x text-xl"></i></button>
                 </div>
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div>
                         <label className="block text-sm font-medium text-gray-700">Titolo *</label>
-                        <input name="title" required className="w-full mt-1 p-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="Titolo evento" />
+                        <input required value={title} onChange={e => setTitle(e.target.value)}
+                            className="w-full mt-1 p-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="Titolo evento" />
                     </div>
                     <div>
                         <label className="block text-sm font-medium text-gray-700">Data *</label>
-                        <input name="date" type="date" required defaultValue={selectedDate} className="w-full mt-1 p-2 border rounded-lg outline-none" />
+                        <input type="date" required value={date} onChange={e => setDate(e.target.value)}
+                            className="w-full mt-1 p-2 border rounded-lg outline-none" />
                     </div>
                     <div className="flex space-x-3">
                         <div className="flex-1">
                             <label className="block text-sm font-medium text-gray-700">Ora inizio</label>
-                            <input name="time" type="time" className="w-full mt-1 p-2 border rounded-lg outline-none" />
+                            <input type="time" value={time} onChange={e => setTime(e.target.value)}
+                                className="w-full mt-1 p-2 border rounded-lg outline-none" />
                         </div>
                         <div className="flex-1">
                             <label className="block text-sm font-medium text-gray-700">Ora fine</label>
-                            <input name="end_time" type="time" className="w-full mt-1 p-2 border rounded-lg outline-none" />
+                            <input type="time" value={endTime} onChange={e => setEndTime(e.target.value)}
+                                className="w-full mt-1 p-2 border rounded-lg outline-none" />
                         </div>
                     </div>
                     <div>
                         <label className="block text-sm font-medium text-gray-700">Descrizione</label>
-                        <textarea name="desc" rows="3" className="w-full mt-1 p-2 border rounded-lg outline-none resize-none" placeholder="Note aggiuntive..."></textarea>
+                        <textarea rows="3" value={description} onChange={e => setDesc(e.target.value)}
+                            className="w-full mt-1 p-2 border rounded-lg outline-none resize-none" placeholder="Note aggiuntive..."></textarea>
                     </div>
                     <ErrorBox message={error} />
                     <div className="flex justify-end space-x-3 pt-1">
                         <button type="button" onClick={onClose} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition">Annulla</button>
                         <button type="submit" disabled={loading}
                             className="px-5 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-semibold disabled:opacity-60 transition">
-                            {loading ? 'Salvataggio...' : 'Salva Evento'}
+                            {loading ? 'Salvataggio...' : (isEdit ? 'Salva Modifiche' : 'Crea Evento')}
                         </button>
                     </div>
                 </form>
@@ -412,6 +430,7 @@ function Dashboard({ auth, onLogout }) {
     const [padrePioThought, setPadrePioThought] = useState('');
 
     const [showNewEvent, setShowNewEvent]             = useState(false);
+    const [editEvent, setEditEvent]                   = useState(null); // evento da modificare
     const [showChangePassword, setShowChangePassword] = useState(false);
     const [showAdminPanel, setShowAdminPanel]         = useState(false);
     const [selectedDate, setSelectedDate]             = useState('');
@@ -479,13 +498,20 @@ function Dashboard({ auth, onLogout }) {
             days.push(
                 <div key={d}
                     className={`min-h-[90px] bg-white border border-gray-200 p-1.5 cursor-pointer hover:bg-blue-50 transition ${isToday ? 'ring-2 ring-inset ring-indigo-500' : ''}`}
-                    onClick={() => { setSelectedDate(dateStr); setShowNewEvent(true); }}>
+                    onClick={() => { setSelectedDate(dateStr); setEditEvent(null); setShowNewEvent(true); }}>
                     <div className={`text-xs font-bold mb-1 ${isToday ? 'text-indigo-600' : 'text-gray-600'}`}>{d}</div>
                     <div className="space-y-0.5">
                         {dayEvents.slice(0,3).map(ev => (
                             <div key={`${ev.id}-${ev.source}`}
-                                className={`text-xs px-1.5 py-0.5 rounded truncate ${eventStyle(ev)}`}
-                                title={`${ev.source === 'office' ? '[Ufficio] ' : ''}${ev.title}`}>
+                                onClick={e => {
+                                    e.stopPropagation();
+                                    // Utenti normali non possono editare eventi ufficio
+                                    if (ev.source === 'office' && !['capo','admin'].includes(role)) return;
+                                    setEditEvent(ev);
+                                    setShowNewEvent(true);
+                                }}
+                                className={`text-xs px-1.5 py-0.5 rounded truncate cursor-pointer hover:opacity-80 transition ${eventStyle(ev)}`}
+                                title={`${ev.source === 'office' ? '[Ufficio] ' : ''}${ev.title} — clicca per modificare`}>
                                 {ev.event_time ? ev.event_time.substring(0,5) + ' ' : ''}{ev.title}
                             </div>
                         ))}
@@ -544,26 +570,33 @@ function Dashboard({ auth, onLogout }) {
                                     </div>
                                     {ev.description && <p className="text-sm text-gray-500 mt-0.5">{ev.description}</p>}
                                 </div>
-                                {/* Pulsante elimina: visibile solo per chi ha i permessi */}
+                                {/* Pulsanti modifica ed elimina — solo per chi ha i permessi */}
                                 {(ev.source === 'office' ? ['capo','admin'].includes(role) : true) && (
-                                    <button
-                                        onClick={async (e) => {
-                                            e.stopPropagation();
-                                            if (!confirm(`Eliminare "${ev.title}"?`)) return;
-                                            try {
-                                                await fetchAPI(`/events/${ev.id}`, { method: 'DELETE', headers: authHeaders });
-                                                loadEvents(activeCalId);
-                                            } catch (err) { alert(err.message); }
-                                        }}
-                                        className="text-gray-300 hover:text-red-400 transition ml-3 flex-shrink-0">
-                                        <i className="ph ph-trash text-lg"></i>
-                                    </button>
+                                    <div className="flex items-center space-x-1 ml-3 flex-shrink-0">
+                                        <button
+                                            onClick={e => { e.stopPropagation(); setEditEvent(ev); setShowNewEvent(true); }}
+                                            className="p-1 text-gray-300 hover:text-indigo-500 transition" title="Modifica evento">
+                                            <i className="ph ph-pencil text-base"></i>
+                                        </button>
+                                        <button
+                                            onClick={async (e) => {
+                                                e.stopPropagation();
+                                                if (!confirm(`Eliminare "${ev.title}"?`)) return;
+                                                try {
+                                                    await fetchAPI(`/events/${ev.id}`, { method: 'DELETE', headers: authHeaders });
+                                                    loadEvents(activeCalId);
+                                                } catch (err) { alert(err.message); }
+                                            }}
+                                            className="p-1 text-gray-300 hover:text-red-400 transition" title="Elimina evento">
+                                            <i className="ph ph-trash text-base"></i>
+                                        </button>
+                                    </div>
                                 )}
                             </li>
                         ))}
                     </ul>
                 )}
-                <button onClick={() => { setSelectedDate(dateStr); setShowNewEvent(true); }}
+                <button onClick={() => { setSelectedDate(dateStr); setEditEvent(null); setShowNewEvent(true); }}
                     className="mt-5 flex items-center text-indigo-600 font-semibold hover:text-indigo-800 transition text-sm">
                     <i className="ph ph-plus-circle text-xl mr-2"></i> Aggiungi Evento
                 </button>
@@ -634,7 +667,7 @@ function Dashboard({ auth, onLogout }) {
                                 className={`w-full flex items-center px-3 py-2.5 rounded-xl transition text-sm ${activeCalId === cal.id ? 'bg-indigo-50 text-indigo-700 font-semibold ring-1 ring-indigo-200' : 'text-gray-600 hover:bg-gray-50'}`}>
                                 <i className={`ph ${calIcon(cal.type)} text-lg mr-3`}></i>
                                 <span>{cal.type}</span>
-                                {cal.is_global && (
+                                {!!cal.is_global && (
                                     <span className="ml-auto text-xs bg-amber-100 text-amber-600 px-1.5 py-0.5 rounded-full font-medium">Condiviso</span>
                                 )}
                             </button>
@@ -696,7 +729,7 @@ function Dashboard({ auth, onLogout }) {
                     <div className="flex items-center space-x-3">
                         {/* Pulsante aggiungi evento — nascosto per utenti normali su calendario Ufficio */}
                         {canEditActiveCalendar && (
-                            <button onClick={() => { setSelectedDate(new Date().toISOString().split('T')[0]); setShowNewEvent(true); }}
+                            <button onClick={() => { setSelectedDate(new Date().toISOString().split('T')[0]); setEditEvent(null); setShowNewEvent(true); }}
                                 className="flex items-center space-x-1.5 px-4 py-1.5 bg-indigo-600 text-white text-sm rounded-lg hover:bg-indigo-700 transition font-semibold">
                                 <i className="ph ph-plus text-base"></i><span>Nuovo Evento</span>
                             </button>
@@ -713,7 +746,7 @@ function Dashboard({ auth, onLogout }) {
                 </header>
 
                 {/* Padre Pio banner — solo in calendario Personale */}
-                {activeCalendar?.type === 'Personale' && padrePioThought && (
+                {activeCalendar?.type === 'Personale' && !!padrePioThought && (
                     <div className="bg-[#fdf6e3] border-b border-[#e9ddb8] px-8 py-3 flex items-start space-x-4 fade-in">
                         <div className="bg-[#c9a86c] text-white p-2 rounded-full mt-0.5 flex-shrink-0">
                             <i className="ph ph-quotes text-base"></i>
@@ -726,7 +759,7 @@ function Dashboard({ auth, onLogout }) {
                 )}
 
                 {/* Read-only banner per utenti normali in vista Ufficio */}
-                {activeCalendar?.is_global && !['capo','admin'].includes(role) && (
+                {!!activeCalendar?.is_global && !['capo','admin'].includes(role) && (
                     <div className="bg-amber-50 border-b border-amber-200 px-8 py-2 flex items-center space-x-2 text-amber-700 text-sm">
                         <i className="ph ph-eye text-base"></i>
                         <span>Stai visualizzando il calendario Ufficio condiviso. Solo i <strong>Capo</strong> possono modificarlo.</span>
@@ -745,13 +778,14 @@ function Dashboard({ auth, onLogout }) {
 
             {/* ── MODALI ── */}
             {showNewEvent && (
-                <NewEventModal
+                <EventModal
                     token={token}
                     activeCalId={activeCalId}
-                    activeCalIsGlobal={!!activeCalendar?.is_global}
+                    activeCalIsGlobal={editEvent ? editEvent.source === 'office' : !!activeCalendar?.is_global}
                     userRole={role}
                     selectedDate={selectedDate}
-                    onClose={() => setShowNewEvent(false)}
+                    editEvent={editEvent}
+                    onClose={() => { setShowNewEvent(false); setEditEvent(null); }}
                     onSaved={() => loadEvents(activeCalId)}
                 />
             )}
