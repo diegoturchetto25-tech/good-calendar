@@ -28,75 +28,171 @@
         const { useState, useEffect, useMemo } = React;
 
         // --- MOCK SERVICE FALLBACK (Per permettere l'esecuzione senza Docker in preview) ---
-        const API_BASE = 'http://localhost:5000/api';
-        let isMockMode = false;
-        
-        const mockDB = {
-            users: [{ id: 1, username: 'demo', password: 'password' }],
-            calendars: [
-                { id: 101, user_id: 1, type: 'Ufficio' },
-                { id: 102, user_id: 1, type: 'Personale' },
-                { id: 103, user_id: 1, type: 'Padre Pio' }
-            ],
-            events: [
-                { id: 1, calendar_id: 101, title: 'Riunione Team', event_date: new Date().toISOString().split('T')[0], event_time: '10:00', description: 'Allineamento settimanale' },
-                { id: 2, calendar_id: 102, title: 'Palestra', event_date: new Date().toISOString().split('T')[0], event_time: '18:30', description: 'Scheda forza' }
-            ]
-        };
+        // --- MOCK SERVICE FALLBACK ---
+const API_BASE = 'http://localhost:5000/api';
+let isMockMode = false;
 
-        const pensieriMock = [
-            "Prega, spera e non agitarti. L'agitazione non giova a nulla.",
-            "La preghiera è la migliore arma che abbiamo.",
-            "Il Signore è con te nelle tue battaglie quotidiane."
-        ];
+const mockDB = {
+    users: [{ id: 1, username: 'demo', password: 'password' }],
+    calendars: [
+        { id: 101, user_id: 1, type: 'Ufficio' },
+        { id: 102, user_id: 1, type: 'Personale' },
+        { id: 103, user_id: 1, type: 'Padre Pio' }
+    ],
+    events: [
+        { id: 1, calendar_id: 101, title: 'Riunione Team', event_date: new Date().toISOString().split('T')[0], event_time: '10:00', description: 'Allineamento settimanale' },
+        { id: 2, calendar_id: 102, title: 'Palestra', event_date: new Date().toISOString().split('T')[0], event_time: '18:30', description: 'Scheda forza' }
+    ]
+};
 
-        async function fetchAPI(endpoint, options = {}) {
-            if (!isMockMode) {
-                try {
-                    const res = await fetch(`${API_BASE}${endpoint}`, {
-                        ...options,
-                        headers: { 'Content-Type': 'application/json', ...options.headers }
-                    });
-                    if (!res.ok) throw new Error('API Error');
-                    return await res.json();
-                } catch (e) {
-                    console.warn("Backend Docker non rilevato. Attivazione Mock Mode per l'anteprima.");
-                    isMockMode = true;
+const pensieriMock = [
+    "Prega, spera e non agitarti. L'agitazione non giova a nulla.",
+    "La preghiera è la migliore arma che abbiamo.",
+    "Il Signore è con te nelle tue battaglie quotidiane."
+];
+
+async function fetchAPI(endpoint, options = {}) {
+
+    // --- PROVA BACKEND REALE ---
+    if (!isMockMode) {
+        try {
+            const res = await fetch(`${API_BASE}${endpoint}`, {
+                ...options,
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...options.headers
                 }
+            });
+
+            const data = await res.json();
+
+            if (!res.ok) {
+                throw new Error(data.error || 'Errore API');
             }
 
-            // Mock Logic
-            return new Promise((resolve, reject) => {
-                setTimeout(() => {
-                    const method = options.method || 'GET';
-                    
-                    if (endpoint === '/auth/login' && method === 'POST') {
-                        resolve({ token: 'mock-jwt-token', username: 'Utente Demo', userId: 1 });
-                    }
-                    else if (endpoint === '/calendars' && method === 'GET') {
-                        resolve(mockDB.calendars);
-                    }
-                    else if (endpoint.startsWith('/events/') && method === 'GET') {
-                        const calId = parseInt(endpoint.split('/').pop());
-                        resolve(mockDB.events.filter(e => e.calendar_id === calId));
-                    }
-                    else if (endpoint === '/events' && method === 'POST') {
-                        const newEvent = { id: Date.now(), ...JSON.parse(options.body) };
-                        mockDB.events.push(newEvent);
-                        resolve({ message: 'Creato', id: newEvent.id });
-                    }
-                    else if (endpoint.startsWith('/padrepio/thought/')) {
-                        const date = endpoint.split('/').pop();
-                        const thought = pensieriMock[date.charCodeAt(date.length-1) % pensieriMock.length];
-                        resolve({ date, thought });
-                    }
-                    else {
-                        reject(new Error("Mock endpoint non trovato"));
-                    }
-                }, 300); // Ritardo simulato
-            });
+            return data;
+
+        } catch (e) {
+            console.warn("⚠️ Backend non raggiungibile. Attivazione Mock Mode.");
+            isMockMode = true;
         }
-        // --- FINE MOCK SERVICE ---
+    }
+
+    // --- MOCK MODE ---
+    return new Promise((resolve, reject) => {
+        setTimeout(() => {
+            const method = options.method || 'GET';
+
+            // =========================
+            // LOGIN (CON CONTROLLO)
+            // =========================
+            if (endpoint === '/auth/login' && method === 'POST') {
+
+                const { username, password } = JSON.parse(options.body);
+
+                const user = mockDB.users.find(
+                    u => u.username === username && u.password === password
+                );
+
+                if (!user) {
+                    return reject(new Error("Credenziali errate"));
+                }
+
+                return resolve({
+                    token: 'mock-jwt-token',
+                    username: user.username,
+                    userId: user.id
+                });
+            }
+
+            // =========================
+            // REGISTRAZIONE
+            // =========================
+            if (endpoint === '/auth/register' && method === 'POST') {
+
+                const { username, password } = JSON.parse(options.body);
+
+                const exists = mockDB.users.find(u => u.username === username);
+                if (exists) {
+                    return reject(new Error("Username già esistente"));
+                }
+
+                const newUser = {
+                    id: Date.now(),
+                    username,
+                    password
+                };
+
+                mockDB.users.push(newUser);
+
+                // Crea calendari mock per il nuovo utente
+                mockDB.calendars.push(
+                    { id: Date.now()+1, user_id: newUser.id, type: 'Ufficio' },
+                    { id: Date.now()+2, user_id: newUser.id, type: 'Personale' },
+                    { id: Date.now()+3, user_id: newUser.id, type: 'Padre Pio' }
+                );
+
+                return resolve({ message: 'Utente creato', userId: newUser.id });
+            }
+
+            // =========================
+            // CALENDARI
+            // =========================
+            if (endpoint === '/calendars' && method === 'GET') {
+
+                const auth = options.headers?.Authorization;
+                if (!auth) return reject(new Error("Token mancante"));
+
+                return resolve(mockDB.calendars);
+            }
+
+            // =========================
+            // EVENTI GET
+            // =========================
+            if (endpoint.startsWith('/events/') && method === 'GET') {
+
+                const calId = parseInt(endpoint.split('/').pop());
+                const events = mockDB.events.filter(e => e.calendar_id === calId);
+
+                return resolve(events);
+            }
+
+            // =========================
+            // EVENTI POST
+            // =========================
+            if (endpoint === '/events' && method === 'POST') {
+
+                const newEvent = {
+                    id: Date.now(),
+                    ...JSON.parse(options.body)
+                };
+
+                mockDB.events.push(newEvent);
+
+                return resolve({ message: 'Creato', id: newEvent.id });
+            }
+
+            // =========================
+            // PADRE PIO
+            // =========================
+            if (endpoint.startsWith('/padrepio/thought/')) {
+
+                const date = endpoint.split('/').pop();
+                const thought = pensieriMock[
+                    date.charCodeAt(date.length - 1) % pensieriMock.length
+                ];
+
+                return resolve({ date, thought });
+            }
+
+            // =========================
+            // DEFAULT
+            // =========================
+            return reject(new Error("Endpoint mock non trovato"));
+
+        }, 300);
+    });
+}
 
 
         // Componente Principale
