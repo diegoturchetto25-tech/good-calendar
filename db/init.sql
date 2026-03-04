@@ -6,13 +6,16 @@ CREATE TABLE IF NOT EXISTS users (
     username VARCHAR(50) NOT NULL UNIQUE,
     email VARCHAR(100) NOT NULL UNIQUE,
     password VARCHAR(255) NOT NULL,
+    role ENUM('admin', 'capo', 'user') NOT NULL DEFAULT 'user',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- user_id è NULL per il calendario Ufficio globale condiviso
 CREATE TABLE IF NOT EXISTS calendars (
     id INT AUTO_INCREMENT PRIMARY KEY,
-    user_id INT NOT NULL,
+    user_id INT,
     type ENUM('Ufficio', 'Personale') NOT NULL,
+    is_global BOOLEAN NOT NULL DEFAULT FALSE,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
@@ -28,14 +31,16 @@ CREATE TABLE IF NOT EXISTS events (
     FOREIGN KEY (calendar_id) REFERENCES calendars(id) ON DELETE CASCADE
 );
 
--- Trigger: crea automaticamente i 2 calendari (Ufficio + Personale) alla registrazione
+-- Unico calendario Ufficio globale condiviso da tutti
+INSERT INTO calendars (user_id, type, is_global) VALUES (NULL, 'Ufficio', TRUE);
+
+-- Trigger: ogni nuovo utente riceve solo il suo calendario Personale privato
 DELIMITER //
 CREATE TRIGGER after_user_insert
 AFTER INSERT ON users
 FOR EACH ROW
 BEGIN
-    INSERT INTO calendars (user_id, type) VALUES (NEW.id, 'Ufficio');
-    INSERT INTO calendars (user_id, type) VALUES (NEW.id, 'Personale');
+    INSERT INTO calendars (user_id, type, is_global) VALUES (NEW.id, 'Personale', FALSE);
 END;
 //
 DELIMITER ;
