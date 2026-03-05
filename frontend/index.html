@@ -626,7 +626,8 @@ function Dashboard({ auth, onLogout }) {
 
     const [calendars, setCalendars]           = useState([]);
     const [activeCalId, setActiveCalId]       = useState(null);
-    const [events, setEvents]                 = useState([]);
+    const [events, setEvents]                 = useState([]);   // events for the active calendar grid
+    const [allEvents, setAllEvents]           = useState([]);   // merged personal+office for the sidebar
     const [view, setView]                     = useState('Mese');
     const [currentDate, setCurrentDate]       = useState(new Date());
     const [padrePioThought, setPadrePioThought] = useState('');
@@ -650,11 +651,36 @@ function Dashboard({ auth, onLogout }) {
         } catch (err) { console.error(err.message); }
     }, [token]);
 
+    // Fetches events from EVERY calendar and merges them for the sidebar
+    // Always runs independently from the active calendar selection
+    const loadAllEvents = useCallback(async (calendarList) => {
+        if (!calendarList || calendarList.length === 0) return;
+        try {
+            const results = await Promise.all(
+                calendarList.map(cal =>
+                    fetchAPI(`/events/${cal.id}`, { headers: authHeaders })
+                        .catch(() => []) // don't let one failure break everything
+                )
+            );
+            // Flatten, deduplicate by id+source (personal calendar already includes office events)
+            const seen = new Set();
+            const merged = [];
+            results.flat().forEach(ev => {
+                const key = `${ev.id}-${ev.source}`;
+                if (!seen.has(key)) { seen.add(key); merged.push(ev); }
+            });
+            setAllEvents(merged);
+        } catch (err) { console.error('loadAllEvents error:', err.message); }
+    }, [token]);
+
     const loadEvents = useCallback(async (calId) => {
         if (!calId) return;
         try {
             const data = await fetchAPI(`/events/${calId}`, { headers: authHeaders });
             setEvents(data);
+            // Also refresh the sidebar with the latest merged data from all calendars
+            // Use functional update to avoid stale closure on `calendars`
+            setCalendars(prev => { loadAllEvents(prev); return prev; });
         } catch (err) { console.error(err.message); }
     }, [token]);
 
@@ -668,6 +694,9 @@ function Dashboard({ auth, onLogout }) {
 
     useEffect(() => { loadCalendars(); }, []);
     useEffect(() => { loadEvents(activeCalId); }, [activeCalId, currentDate, view]);
+    // Re-load ALL events for the sidebar whenever: calendars are set, or active calendar changes
+    // (active calendar change = a new event may have been added)
+    useEffect(() => { loadAllEvents(calendars); }, [calendars]);
     useEffect(() => {
         if (activeCalendar?.type === 'Personale') loadPadrePio();
         else setPadrePioThought('');
@@ -1046,7 +1075,7 @@ function Dashboard({ auth, onLogout }) {
                     {/* Upcoming events side panel — hidden in year view */}
                     {view !== 'Anno' && (
                         <UpcomingPanel
-                            events={events}
+                            events={allEvents}
                             userRole={role}
                             onEditEvent={ev => { setEditEvent(ev); setShowNewEvent(true); }}
                             onDeleteEvent={async ev => {
