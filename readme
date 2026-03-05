@@ -1,430 +1,58 @@
-Ciao! Da Senior Full Stack Developer, apprezzo molto la struttura del tuo progetto. Un'architettura a servizi separati, containerizzata con Docker, è l'approccio ideale per scalabilità e manutenibilità.
-Ho progettato questa soluzione focalizzandomi su un MVP (Minimum Viable Product) robusto. Per il frontend ho optato per HTML/CSS/JS puro (Vanilla JS) per mantenere il pacchetto leggero, facilmente testabile e senza la necessità di configurare un bundler come Webpack o Vite in questa fase iniziale, ma con una struttura pronta per essere convertita in React se necessario.
-Ecco la struttura completa del tuo progetto.
+# **📅 Good Calendar**
 
-Struttura delle Cartelle
-Crea una cartella radice chiamata multi-calendar-app e organizzala in questo modo:
+## **🎯 Goal of the Project**
 
-Plaintext
+The primary goal of **Good Calendar** is to create a robust, multi-user calendar application equipped with a dedicated permissions system.  
+A core focus of this project is smart schedule management: the system is designed to prevent scheduling conflicts by ensuring that appointments booked in the **Office** calendar can never overlap with events scheduled in the **Personal** calendar. This guarantees a clean separation of work and private life without double-booking.
 
+## **🛠️ Technology Stack**
 
-multi-calendar-app/
-├── docker-compose.yml
-├── db/
-│   └── init.sql
-├── backend/
-│   ├── Dockerfile
-│   ├── package.json
-│   └── server.js
-└── frontend/
-    ├── Dockerfile
-    ├── index.html
-    ├── style.css
-    └── app.js
+This project is built using a modern, containerized architecture that separates the frontend, backend, and database for maximum scalability and maintainability.
 
+* **Frontend:** HTML5, CSS3, Vanilla JavaScript (A lightweight, fast, and easily testable UI without heavy bundlers)  
+* **Backend:** Node.js with Express.js  
+* **Database:** MySQL  
+* **Authentication:** JSON Web Tokens (JWT) for secure user sessions  
+* **Infrastructure:** Docker & Docker Compose (Containerized for consistent environments)
 
-1. Database (/db)
-Iniziamo con lo schema SQL. Sfrutteremo l'inizializzazione automatica di MySQL in Docker.
-db/init.sql
-
-SQL
-
-
-CREATE DATABASE IF NOT EXISTS calendar_db;
-USE calendar_db;
-
-CREATE TABLE users (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    username VARCHAR(50) UNIQUE NOT NULL,
-    password VARCHAR(255) NOT NULL -- NB: In produzione, usare bcrypt!
-);
-
-CREATE TABLE calendars (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    user_id INT NOT NULL,
-    name ENUM('Ufficio', 'Personale', 'Padre Pio') NOT NULL,
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-);
-
-CREATE TABLE events (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    calendar_id INT NOT NULL,
-    title VARCHAR(100) NOT NULL,
-    event_date DATE NOT NULL,
-    event_time TIME,
-    description TEXT,
-    FOREIGN KEY (calendar_id) REFERENCES calendars(id) ON DELETE CASCADE
-);
-
--- Dati Mock iniziali
-INSERT INTO users (username, password) VALUES ('mario', 'password123');
-INSERT INTO calendars (user_id, name) VALUES (1, 'Ufficio'), (1, 'Personale'), (1, 'Padre Pio');
-INSERT INTO events (calendar_id, title, event_date, event_time, description) 
-VALUES (1, 'Riunione Team', CURDATE(), '10:00:00', 'Sincronizzazione settimanale');
-
-
-2. Backend (/backend)
-Il backend Node.js espone le API REST, gestisce il JWT e fornisce il "Pensiero del giorno" di Padre Pio.
-backend/package.json
-
-JSON
-
-
-{
-  "name": "calendar-backend",
-  "version": "1.0.0",
-  "main": "server.js",
-  "dependencies": {
-    "cors": "^2.8.5",
-    "express": "^4.18.2",
-    "jsonwebtoken": "^9.0.0",
-    "mysql2": "^3.3.3"
-  }
-}
-
-
-backend/Dockerfile
-
-Dockerfile
-
-
-FROM node:18-alpine
-WORKDIR /usr/src/app
-COPY package*.json ./
-RUN npm install
-COPY . .
-EXPOSE 3000
-CMD ["node", "server.js"]
-
-
-backend/server.js
-
-JavaScript
-
-
-const express = require('express');
-const mysql = require('mysql2/promise');
-const jwt = require('jsonwebtoken');
-const cors = require('cors');
-
-const app = express();
-app.use(cors());
-app.use(express.json());
-
-const JWT_SECRET = process.env.JWT_SECRET || 'super_secret_key';
-
-// Connessione DB con retry (utile per Docker)
-let pool;
-async function connectDB() {
-    try {
-        pool = mysql.createPool({
-            host: process.env.DB_HOST,
-            user: process.env.DB_USER,
-            password: process.env.DB_PASSWORD,
-            database: process.env.DB_NAME,
-            waitForConnections: true
-        });
-        console.log("Connesso al database MySQL.");
-    } catch (err) {
-        console.error("Errore di connessione DB, riprovo in 5 sec...", err);
-        setTimeout(connectDB, 5000);
-    }
-}
-connectDB();
-
-// Middleware di Autenticazione
-const authenticateToken = (req, res, next) => {
-    const token = req.headers['authorization']?.split(' ')[1];
-    if (!token) return res.sendStatus(401);
-    jwt.verify(token, JWT_SECRET, (err, user) => {
-        if (err) return res.sendStatus(403);
-        req.user = user;
-        next();
-    });
-};
-
-// 1. Login Endpoint
-app.post('/api/login', async (req, res) => {
-    const { username, password } = req.body;
-    const [rows] = await pool.query('SELECT * FROM users WHERE username = ? AND password = ?', [username, password]);
-    
-    if (rows.length > 0) {
-        const user = rows[0];
-        const token = jwt.sign({ id: user.id, username: user.username }, JWT_SECRET, { expiresIn: '2h' });
-        res.json({ token });
-    } else {
-        res.status(401).json({ error: 'Credenziali non valide' });
-    }
-});
-
-// 2. Ottieni Calendari dell'utente
-app.get('/api/calendars', authenticateToken, async (req, res) => {
-    const [rows] = await pool.query('SELECT * FROM calendars WHERE user_id = ?', [req.user.id]);
-    res.json(rows);
-});
-
-// 3. CRUD Eventi (GET)
-app.get('/api/events/:calendar_id', authenticateToken, async (req, res) => {
-    // Aggiungi filtri view (giorno, mese, anno) via query string se necessario
-    const [rows] = await pool.query('SELECT * FROM events WHERE calendar_id = ? ORDER BY event_date ASC', [req.params.calendar_id]);
-    res.json(rows);
-});
-
-// 4. CRUD Eventi (POST)
-app.post('/api/events', authenticateToken, async (req, res) => {
-    const { calendar_id, title, event_date, event_time, description } = req.body;
-    await pool.query('INSERT INTO events (calendar_id, title, event_date, event_time, description) VALUES (?, ?, ?, ?, ?)', 
-        [calendar_id, title, event_date, event_time, description]);
-    res.status(201).json({ message: 'Evento creato' });
-});
-
-// 5. Funzione Mock: Pensiero di Padre Pio
-app.get('/api/padrepio/quote', authenticateToken, (req, res) => {
-    const quotes = [
-        "Prega, spera e non ti agitare.",
-        "Il dubbio è il più grande nemico della fede.",
-        "Amate la Madonna e fatela amare.",
-        "La preghiera è la migliore arma che abbiamo."
-    ];
-    // Seleziona una frase basata sul giorno dell'anno
-    const dayOfYear = Math.floor((new Date() - new Date(new Date().getFullYear(), 0, 0)) / 1000 / 60 / 60 / 24);
-    const dailyQuote = quotes[dayOfYear % quotes.length];
-    res.json({ quote: dailyQuote, event: "Santo Rosario Serale" });
-});
-
-app.listen(3000, () => console.log('Backend in ascolto sulla porta 3000'));
-
-
-3. Frontend (/frontend)
-Un'interfaccia pulita con Nginx. Ho implementato una logica che filtra visivamente gli eventi per vista (Giorno/Mese/Anno).
-frontend/Dockerfile
-
-Dockerfile
-
-
-FROM nginx:alpine
-COPY . /usr/share/nginx/html
-EXPOSE 80
-
-
-frontend/index.html
-
-HTML
-
-
-<!DOCTYPE html>
-<html lang="it">
-<head>
-    <meta charset="UTF-8">
-    <title>Multi-Calendar App</title>
-    <link rel="stylesheet" href="style.css">
-</head>
-<body>
-    <div id="login-container">
-        <h2>Login</h2>
-        <input type="text" id="username" placeholder="Username (es. mario)">
-        <input type="password" id="password" placeholder="Password (es. password123)">
-        <button onclick="login()">Entra</button>
-    </div>
-
-    <div id="app-container" style="display: none;">
-        <header>
-            <h1>I Miei Calendari</h1>
-            <button onclick="logout()">Logout</button>
-        </header>
-        
-        <div class="controls">
-            <select id="calendar-select" onchange="loadEvents()"></select>
-            <div class="views">
-                <button onclick="changeView('day')">Giorno</button>
-                <button onclick="changeView('month')">Mese</button>
-                <button onclick="changeView('year')">Anno</button>
-            </div>
-        </div>
-
-        <div id="padrepio-banner" style="display: none;">
-            <h3>Pensiero del Giorno</h3>
-            <p id="pp-quote"></p>
-            <small id="pp-event"></small>
-        </div>
-
-        <div id="events-list"></div>
-    </div>
-
-    <script src="app.js"></script>
-</body>
-</html>
-
-
-frontend/style.css
-
-CSS
-
-
-body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f4f7f6; margin: 0; padding: 20px; color: #333; }
-#login-container, #app-container { max-width: 800px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-input, select, button { padding: 10px; margin: 5px 0; border: 1px solid #ccc; border-radius: 4px; }
-button { background: #007bff; color: white; border: none; cursor: pointer; }
-button:hover { background: #0056b3; }
-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #eee; padding-bottom: 10px; margin-bottom: 20px; }
-.controls { display: flex; justify-content: space-between; margin-bottom: 20px; }
-.event-card { border-left: 4px solid #007bff; padding: 10px; margin-bottom: 10px; background: #fafafa; }
-#padrepio-banner { background: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin-bottom: 20px; border-radius: 4px; }
-
-
-frontend/app.js
-
-JavaScript
-
-
-const API_URL = 'http://localhost:3000/api';
-let token = localStorage.getItem('token');
-let currentCalendars = [];
-let currentEvents = [];
-let currentView = 'month'; // default
-
-if (token) showApp();
-
-async function login() {
-    const u = document.getElementById('username').value;
-    const p = document.getElementById('password').value;
-    const res = await fetch(`${API_URL}/login`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: u, password: p })
-    });
-    if (res.ok) {
-        const data = await res.json();
-        token = data.token;
-        localStorage.setItem('token', token);
-        showApp();
-    } else alert('Login fallito');
-}
-
-function logout() {
-    localStorage.removeItem('token');
-    location.reload();
-}
-
-async function showApp() {
-    document.getElementById('login-container').style.display = 'none';
-    document.getElementById('app-container').style.display = 'block';
-    await loadCalendars();
-}
-
-async function loadCalendars() {
-    const res = await fetch(`${API_URL}/calendars`, { headers: { 'Authorization': `Bearer ${token}` } });
-    currentCalendars = await res.json();
-    const select = document.getElementById('calendar-select');
-    select.innerHTML = currentCalendars.map(c => `<option value="${c.id}" data-name="${c.name}">${c.name}</option>`).join('');
-    loadEvents();
-}
-
-async function loadEvents() {
-    const select = document.getElementById('calendar-select');
-    const calId = select.value;
-    const calName = select.options[select.selectedIndex].getAttribute('data-name');
-    
-    // Gestione Padre Pio Banner
-    const ppBanner = document.getElementById('padrepio-banner');
-    if (calName === 'Padre Pio') {
-        const ppRes = await fetch(`${API_URL}/padrepio/quote`, { headers: { 'Authorization': `Bearer ${token}` } });
-        const ppData = await ppRes.json();
-        document.getElementById('pp-quote').innerText = `"${ppData.quote}"`;
-        document.getElementById('pp-event').innerText = `Evento suggerito: ${ppData.event}`;
-        ppBanner.style.display = 'block';
-    } else {
-        ppBanner.style.display = 'none';
-    }
-
-    const res = await fetch(`${API_URL}/events/${calId}`, { headers: { 'Authorization': `Bearer ${token}` } });
-    currentEvents = await res.json();
-    renderEvents();
-}
-
-function changeView(view) {
-    currentView = view;
-    renderEvents();
-}
-
-function renderEvents() {
-    const list = document.getElementById('events-list');
-    const today = new Date();
-    
-    // Filtro mock lato frontend per semplicità. In produzione, usare query SQL.
-    const filtered = currentEvents.filter(e => {
-        const edate = new Date(e.event_date);
-        if (currentView === 'day') return edate.toDateString() === today.toDateString();
-        if (currentView === 'month') return edate.getMonth() === today.getMonth() && edate.getFullYear() === today.getFullYear();
-        if (currentView === 'year') return edate.getFullYear() === today.getFullYear();
-        return true;
-    });
-
-    if (filtered.length === 0) {
-        list.innerHTML = '<p>Nessun evento per questa vista.</p>';
-        return;
-    }
-
-    list.innerHTML = filtered.map(e => `
-        <div class="event-card">
-            <h4>${e.title}</h4>
-            <p><strong>${new Date(e.event_date).toLocaleDateString('it-IT')}</strong> - ${e.event_time || 'Tutto il giorno'}</p>
-            <p>${e.description || ''}</p>
-        </div>
-    `).join('');
-}
-
-
-4. Docker Compose (docker-compose.yml)
-Questo file orchestra il DB, il Backend e il Frontend.
-
-YAML
-
-
-version: '3.8'
-
-services:
-  db:
-    image: mysql:8.0
-    container_name: calendar_db
-    environment:
-      MYSQL_ROOT_PASSWORD: rootpassword
-      MYSQL_DATABASE: calendar_db
-    ports:
-      - "3306:3306"
-    volumes:
-      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
-
-  backend:
-    build: ./backend
-    container_name: calendar_backend
-    ports:
-      - "3000:3000"
-    environment:
-      - DB_HOST=db
-      - DB_USER=root
-      - DB_PASSWORD=rootpassword
-      - DB_NAME=calendar_db
-      - JWT_SECRET=my_super_secret_key
-    depends_on:
-      - db
-
-  frontend:
-    build: ./frontend
-    container_name: calendar_frontend
-    ports:
-      - "8080:80"
-    depends_on:
-      - backend
-
-
-Come Avviare il Progetto
-Assicurati che Docker Desktop sia in esecuzione.
-Apri il terminale nella cartella multi-calendar-app.
-Esegui il comando:
-Bash
-docker-compose up --build
-
-
-Vai su http://localhost:8080 dal tuo browser.
-Fai il login con Username: mario, Password: password123.
-Ti piacerebbe che estendessi il codice aggiungendo un modulo specifico per l'inserimento di nuovi eventi dal frontend?
+## **⚙️ Configuration & Setup**
+
+Getting the project up and running is straightforward thanks to Docker. Follow these steps to configure and launch the application locally:
+
+### **Prerequisites**
+
+* Ensure you have [Docker](https://www.docker.com/products/docker-desktop/) and Docker Compose installed and running on your machine.  
+* Git installed on your machine.
+
+### **Installation Steps**
+
+1. **Clone the repository**  
+   Open your terminal and clone the project to your local machine:  
+   git clone \[https://github.com/diegoturchetto25-tech/good-calendar.git\](https://github.com/diegoturchetto25-tech/good-calendar.git)
+
+2. **Navigate to the project directory**  
+   cd good-calendar
+
+3. **Build and start the containers**  
+   Use Docker Compose to build the images and start the database, backend, and frontend services simultaneously:  
+   docker-compose up \--build
+
+4. **Access the application**  
+   Once the containers are running, open your web browser and navigate to:  
+   http://localhost:8080
+
+5. **Test the Application**  
+   You can log in and test the application using the following default mock credentials provisioned in the database:
+
+| Username | Email | Password |
+| :---- | :---- | :---- |
+| admin | admin@calendar.local | password |
+| mario | mario.rossi@test.local | password |
+| luisa | luisa.verdi@test.local | password |
+| diego | diego.turchetto@test.local | password |
+| daniele | daniele.gobbo@test.local | password |
+
+### **Stopping the Application**
+
+To stop the running containers, press Ctrl \+ C in your terminal, or run the following command in another terminal window within the project directory:  
+docker-compose down  
