@@ -417,6 +417,208 @@ function AdminPanel({ token, onClose }) {
     );
 }
 
+
+// ── Upcoming Events Panel ────────────────────────────────────
+function UpcomingPanel({ events, userRole, onEditEvent, onDeleteEvent }) {
+
+    // ── Timezone-safe date helpers ───────────────────────────────
+    // MySQL returns event_date as "2026-03-05T00:00:00.000Z" or "2026-03-05".
+    // We always normalise to a plain local "YYYY-MM-DD" string.
+    const toDateStr = (raw) => {
+        if (!raw) return null;
+        const s = (raw instanceof Date)
+            ? raw.toLocaleDateString('sv')        // "sv" locale = "YYYY-MM-DD" in local time
+            : String(raw).substring(0, 10);       // already a string, grab first 10 chars
+        return s;
+    };
+
+    // Get today's local YYYY-MM-DD without any UTC drift
+    const localToday = () => {
+        const n = new Date();
+        return `${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}-${String(n.getDate()).padStart(2,'0')}`;
+    };
+
+    // Add N days to a YYYY-MM-DD string, returns YYYY-MM-DD
+    const addDays = (dateStr, n) => {
+        const d = new Date(dateStr + 'T12:00:00'); // noon avoids DST ambiguity
+        d.setDate(d.getDate() + n);
+        return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    };
+
+    const todayStr    = localToday();              // "2026-03-05"
+    const tomorrowStr = addDays(todayStr, 1);      // "2026-03-06"
+    const endStr      = addDays(todayStr, 7);      // "2026-03-12" — exclusive upper bound
+
+    // ── Filter: today ≤ date < today+7 ──────────────────────────
+    // All string comparisons are safe since YYYY-MM-DD is lexicographically ordered.
+    // React re-runs this on every render → panel is always in sync with `events` prop.
+    const upcoming = events
+        .filter(ev => {
+            const ds = toDateStr(ev.event_date);
+            return ds && ds >= todayStr && ds < endStr;
+        })
+        .sort((a, b) => {
+            const da = toDateStr(a.event_date) || '';
+            const db = toDateStr(b.event_date) || '';
+            if (da !== db) return da < db ? -1 : 1;
+            const at = (a.start_time || a.event_time || '').substring(0, 5);
+            const bt = (b.start_time || b.event_time || '').substring(0, 5);
+            return at < bt ? -1 : 1;
+        });
+
+    // ── Group by YYYY-MM-DD ──────────────────────────────────────
+    const grouped = {};
+    upcoming.forEach(ev => {
+        const key = toDateStr(ev.event_date);
+        if (!grouped[key]) grouped[key] = [];
+        grouped[key].push(ev);
+    });
+    const sortedDates = Object.keys(grouped).sort();
+
+    // ── Day label: pure string comparison, no UTC conversion ─────
+    const formatDayLabel = (dateStr) => {
+        const d = new Date(dateStr + 'T12:00:00'); // noon = no DST edge case
+        const weekday   = d.toLocaleDateString('it-IT', { weekday: 'short' });
+        const dateLabel = d.toLocaleDateString('it-IT', { day: 'numeric', month: 'short' });
+        if (dateStr === todayStr)    return { main: 'Oggi',   sub: `${weekday}, ${dateLabel}`, isToday: true  };
+        if (dateStr === tomorrowStr) return { main: 'Domani', sub: `${weekday}, ${dateLabel}`, isToday: false };
+        return { main: weekday.charAt(0).toUpperCase() + weekday.slice(1), sub: dateLabel, isToday: false };
+    };
+
+    // ── Overlap detection for a single day's events ──────────────
+    const getOverlapIdsForDay = (dayEvs) => {
+        const ids = new Set();
+        for (let i = 0; i < dayEvs.length; i++) {
+            for (let j = i + 1; j < dayEvs.length; j++) {
+                const aS = (dayEvs[i].start_time || dayEvs[i].event_time || '').substring(0, 5);
+                const aE = (dayEvs[i].end_time   || dayEvs[i].event_end_time || '').substring(0, 5);
+                const bS = (dayEvs[j].start_time || dayEvs[j].event_time || '').substring(0, 5);
+                const bE = (dayEvs[j].end_time   || dayEvs[j].event_end_time || '').substring(0, 5);
+                if (aS && aE && bS && bE && aS < bE && aE > bS) {
+                    ids.add(`${dayEvs[i].id}-${dayEvs[i].source}`);
+                    ids.add(`${dayEvs[j].id}-${dayEvs[j].source}`);
+                }
+            }
+        }
+        return ids;
+    };
+
+    // ── Color scheme ─────────────────────────────────────────────
+    const getEventColors = (ev, isOvlp) => {
+        if (isOvlp)              return { bar: 'bg-orange-400', bg: 'bg-orange-50 border-orange-200', time: 'text-orange-600', title: 'text-orange-900' };
+        if (ev.source === 'office') return { bar: 'bg-emerald-400', bg: 'bg-emerald-50 border-emerald-200', time: 'text-emerald-600', title: 'text-gray-800' };
+        return                        { bar: 'bg-blue-500',    bg: 'bg-blue-50 border-blue-200',     time: 'text-blue-600',    title: 'text-gray-800' };
+    };
+
+    // ── Render ───────────────────────────────────────────────────
+    return (
+        <div className="w-full lg:w-80 flex-shrink-0 flex flex-col bg-white border-t lg:border-t-0 lg:border-l border-gray-200 overflow-hidden max-h-72 lg:max-h-none">
+            {/* Panel header */}
+            <div className="px-5 py-4 border-b border-gray-100 bg-gray-50">
+                <h3 className="text-sm font-bold text-gray-700 uppercase tracking-wider flex items-center space-x-2">
+                    <i className="ph ph-calendar-blank text-indigo-500 text-base"></i>
+                    <span>Prossimi 7 giorni</span>
+                </h3>
+            </div>
+
+            {/* Scrollable list */}
+            <div className="flex-1 overflow-y-auto px-4 py-3 space-y-5">
+                {sortedDates.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-12 text-gray-400">
+                        <i className="ph ph-calendar-x text-4xl mb-3"></i>
+                        <p className="text-sm text-center">Nessun evento nei prossimi 7 giorni</p>
+                    </div>
+                ) : (
+                    sortedDates.map(dateStr => {
+                        const { main, sub, isToday } = formatDayLabel(dateStr);
+                        const dayEvs    = grouped[dateStr];
+                        const overlapIds = getOverlapIdsForDay(dayEvs);
+
+                        return (
+                            <div key={dateStr}>
+                                {/* Day header */}
+                                <div className="flex items-baseline space-x-2 mb-2">
+                                    <span className={`text-sm font-bold ${isToday ? 'text-indigo-600' : 'text-gray-700'}`}>{main}</span>
+                                    <span className="text-xs text-gray-400 font-medium">{sub}</span>
+                                    {isToday && (
+                                        <span className="ml-auto text-xs bg-indigo-100 text-indigo-600 px-1.5 py-0.5 rounded-full font-semibold">oggi</span>
+                                    )}
+                                </div>
+
+                                {/* Event cards */}
+                                <div className="space-y-1.5">
+                                    {dayEvs.map(ev => {
+                                        const key     = `${ev.id}-${ev.source}`;
+                                        const isOvlp  = overlapIds.has(key);
+                                        const colors  = getEventColors(ev, isOvlp);
+                                        const startT  = (ev.start_time || ev.event_time || '').substring(0, 5);
+                                        const endT    = (ev.end_time   || ev.event_end_time || '').substring(0, 5);
+                                        const canEdit = ev.source === 'office' ? ['capo','admin'].includes(userRole) : true;
+
+                                        return (
+                                            <div key={key}
+                                                className={`flex items-stretch rounded-xl border ${colors.bg} overflow-hidden group`}>
+                                                {/* Left colour bar */}
+                                                <div className={`w-1 flex-shrink-0 ${colors.bar}`}></div>
+                                                {/* Time */}
+                                                <div className={`w-12 flex-shrink-0 flex items-center justify-center px-1 py-3 text-xs font-bold ${colors.time}`}>
+                                                    {startT || '—'}
+                                                </div>
+                                                {/* Content */}
+                                                <div className="flex-1 py-2.5 pr-2 min-w-0">
+                                                    <div className={`text-sm font-semibold truncate ${colors.title}`}>{ev.title}</div>
+                                                    <div className="flex items-center flex-wrap gap-1 mt-0.5">
+                                                        {startT && (
+                                                            <span className="text-xs text-gray-400">{startT}{endT ? ` – ${endT}` : ''}</span>
+                                                        )}
+                                                        {ev.source === 'office' && (
+                                                            <span className="text-xs bg-emerald-100 text-emerald-700 px-1 py-0.5 rounded font-medium">Ufficio</span>
+                                                        )}
+                                                        {isOvlp && <span className="text-xs text-orange-500">⚠</span>}
+                                                    </div>
+                                                </div>
+                                                {/* Hover actions */}
+                                                {canEdit && (
+                                                    <div className="flex flex-col justify-center pr-2 opacity-0 group-hover:opacity-100 transition-opacity space-y-1">
+                                                        <button onClick={() => onEditEvent(ev)}
+                                                            className="p-1 text-gray-300 hover:text-indigo-500 transition rounded" title="Modifica">
+                                                            <i className="ph ph-pencil text-sm"></i>
+                                                        </button>
+                                                        <button onClick={() => onDeleteEvent(ev)}
+                                                            className="p-1 text-gray-300 hover:text-red-400 transition rounded" title="Elimina">
+                                                            <i className="ph ph-trash text-sm"></i>
+                                                        </button>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+
+                                <div className="mt-4 border-b border-gray-100"></div>
+                            </div>
+                        );
+                    })
+                )}
+            </div>
+
+            {/* Footer legend */}
+            <div className="px-4 py-3 border-t border-gray-100 bg-gray-50 flex flex-wrap gap-3 text-xs text-gray-500">
+                <span className="flex items-center space-x-1.5">
+                    <span className="w-2.5 h-2.5 rounded-full bg-blue-500"></span><span>Personale</span>
+                </span>
+                <span className="flex items-center space-x-1.5">
+                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-400"></span><span>Ufficio</span>
+                </span>
+                <span className="flex items-center space-x-1.5">
+                    <span className="w-2.5 h-2.5 rounded-full bg-orange-400"></span><span>Sovrapposti</span>
+                </span>
+            </div>
+        </div>
+    );
+}
+
+
 // ── Dashboard ────────────────────────────────────────────────
 function Dashboard({ auth, onLogout }) {
     const { username, token, role } = auth;
@@ -830,13 +1032,32 @@ function Dashboard({ auth, onLogout }) {
                     </div>
                 )}
 
-                {/* Calendar area */}
-                <div className="flex-1 p-6 overflow-y-auto">
-                    <div className="max-w-6xl mx-auto">
-                        {view === 'Mese'  && renderMese()}
-                        {view === 'Giorno' && renderGiorno()}
-                        {view === 'Anno'  && renderAnno()}
+                {/* Calendar area + side panel */}
+                <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
+                    {/* Main calendar grid */}
+                    <div className="flex-1 p-3 lg:p-6 overflow-y-auto">
+                        <div className="max-w-5xl mx-auto">
+                            {view === 'Mese'  && renderMese()}
+                            {view === 'Giorno' && renderGiorno()}
+                            {view === 'Anno'  && renderAnno()}
+                        </div>
                     </div>
+
+                    {/* Upcoming events side panel — hidden in year view */}
+                    {view !== 'Anno' && (
+                        <UpcomingPanel
+                            events={events}
+                            userRole={role}
+                            onEditEvent={ev => { setEditEvent(ev); setShowNewEvent(true); }}
+                            onDeleteEvent={async ev => {
+                                if (!confirm(`Eliminare "${ev.title}"?`)) return;
+                                try {
+                                    await fetchAPI(`/events/${ev.id}`, { method: 'DELETE', headers: authHeaders });
+                                    loadEvents(activeCalId);
+                                } catch (err) { alert(err.message); }
+                            }}
+                        />
+                    )}
                 </div>
             </div>
 
