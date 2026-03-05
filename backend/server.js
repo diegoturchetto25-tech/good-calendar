@@ -258,39 +258,69 @@ app.get('/api/events/:calendarId', authenticateToken, async (req, res) => {
         if (!calendar.is_global && calendar.user_id !== req.user.id)
             return res.status(403).json({ error: 'Accesso negato a questo calendario.' });
 
+        const formatEvent = (ev, source) => ({
+            id:           ev.id,
+            title:        ev.title,
+            event_date:   ev.event_date,
+            start_time:   ev.event_time,
+            end_time:     ev.event_end_time,
+            // Keep legacy fields so existing frontend code still works
+            event_time:     ev.event_time,
+            event_end_time: ev.event_end_time,
+            description:  ev.description,
+            created_at:   ev.created_at,
+            calendar_id:  ev.calendar_id,
+            source,
+            type: source   // alias for frontend convenience
+        });
+
         if (calendar.is_global) {
-            // Vista Ufficio: solo eventi ufficio
+            // Vista Ufficio: solo eventi ufficio con metadati completi
             const [events] = await pool.execute(
-                `SELECT *, 'office' AS source FROM events
-                 WHERE calendar_id = ? ORDER BY event_date, event_time`,
+                `SELECT e.*, u.username AS created_by_username
+                 FROM events e
+                 LEFT JOIN calendars c ON e.calendar_id = c.id
+                 LEFT JOIN users u ON c.user_id = u.id
+                 WHERE e.calendar_id = ?
+                 ORDER BY e.event_date, e.event_time`,
                 [calendarId]
             );
-            return res.json(events);
+            return res.json(events.map(ev => formatEvent(ev, 'office')));
         }
 
-        // Vista Personale: eventi personali + eventi ufficio globale (combinati)
-        const [personalEvents] = await pool.execute(
-            `SELECT *, 'personal' AS source FROM events WHERE calendar_id = ?`,
-            [calendarId]
+        // Vista Personale: eventi personali + eventi ufficio (combinati, senza blocco overlap)
+        const [personalRows] = await pool.execute(
+            `SELECT e.*, u.username AS created_by_username
+             FROM events e
+             LEFT JOIN users u ON u.id = ?
+             WHERE e.calendar_id = ?`,
+            [req.user.id, calendarId]
         );
 
         const [officeCalRows] = await pool.execute(
             'SELECT id FROM calendars WHERE is_global = TRUE AND type = ?', ['Ufficio']
         );
 
-        let officeEvents = [];
+        let officeRows = [];
         if (officeCalRows.length > 0) {
             const [rows] = await pool.execute(
-                `SELECT *, 'office' AS source FROM events WHERE calendar_id = ?`,
+                `SELECT e.*, u.username AS created_by_username
+                 FROM events e
+                 LEFT JOIN calendars c ON e.calendar_id = c.id
+                 LEFT JOIN users u ON c.user_id = u.id
+                 WHERE e.calendar_id = ?`,
                 [officeCalRows[0].id]
             );
-            officeEvents = rows;
+            officeRows = rows;
         }
 
-        const combined = [...personalEvents, ...officeEvents].sort((a, b) => {
+        const combined = [
+            ...personalRows.map(ev => formatEvent(ev, 'personal')),
+            ...officeRows.map(ev => formatEvent(ev, 'office'))
+        ].sort((a, b) => {
             if (a.event_date < b.event_date) return -1;
             if (a.event_date > b.event_date) return 1;
-            if ((a.event_time || '') < (b.event_time || '')) return -1;
+            if ((a.start_time || '') < (b.start_time || '')) return -1;
             return 1;
         });
 
@@ -326,27 +356,9 @@ app.post('/api/events', authenticateToken, async (req, res) => {
                 return res.status(403).json({ error: 'Non puoi aggiungere eventi al calendario di un altro utente.' });
         }
 
-        // Controllo sovrapposizione cross-calendar
-        if (event_time && event_end_time) {
-            if (event_time >= event_end_time)
-                return res.status(400).json({ error: 'L\'ora di fine deve essere successiva all\'ora di inizio.' });
-
-            const [overlapping] = await pool.execute(
-                `SELECT e.title, e.event_time, e.event_end_time, c.type AS calendar_type
-                 FROM events e JOIN calendars c ON e.calendar_id = c.id
-                 WHERE (c.user_id = ? OR c.is_global = TRUE)
-                   AND e.event_date = ?
-                   AND e.event_time IS NOT NULL AND e.event_end_time IS NOT NULL
-                   AND ? < e.event_end_time AND ? > e.event_time`,
-                [req.user.id, event_date, event_time, event_end_time]
-            );
-            if (overlapping.length > 0) {
-                const c = overlapping[0];
-                return res.status(400).json({
-                    error: `Conflitto orario: si sovrappone con "${c.title}" (${c.event_time.substring(0,5)}–${c.event_end_time.substring(0,5)}) nel calendario "${c.calendar_type}".`
-                });
-            }
-        }
+        // Validazione range orario (overlap permesso, solo end < start bloccato)
+        if (event_time && event_end_time && event_time >= event_end_time)
+            return res.status(400).json({ error: "L'ora di fine deve essere successiva all'ora di inizio." });
 
         const [result] = await pool.execute(
             'INSERT INTO events (calendar_id, title, event_date, event_time, event_end_time, description) VALUES (?, ?, ?, ?, ?, ?)',
@@ -392,28 +404,9 @@ app.put('/api/events/:eventId', authenticateToken, async (req, res) => {
                 return res.status(403).json({ error: 'Non puoi modificare eventi di un altro utente.' });
         }
 
-        // Controllo sovrapposizione (esclude l'evento stesso)
-        if (event_time && event_end_time) {
-            if (event_time >= event_end_time)
-                return res.status(400).json({ error: "L'ora di fine deve essere successiva all'ora di inizio." });
-
-            const [overlapping] = await pool.execute(
-                `SELECT e.title, e.event_time, e.event_end_time, c.type AS calendar_type
-                 FROM events e JOIN calendars c ON e.calendar_id = c.id
-                 WHERE (c.user_id = ? OR c.is_global = TRUE)
-                   AND e.event_date = ?
-                   AND e.id != ?
-                   AND e.event_time IS NOT NULL AND e.event_end_time IS NOT NULL
-                   AND ? < e.event_end_time AND ? > e.event_time`,
-                [req.user.id, event_date, eventId, event_time, event_end_time]
-            );
-            if (overlapping.length > 0) {
-                const c = overlapping[0];
-                return res.status(400).json({
-                    error: `Conflitto orario: si sovrappone con "${c.title}" (${c.event_time.substring(0,5)}–${c.event_end_time.substring(0,5)}) nel calendario "${c.calendar_type}".`
-                });
-            }
-        }
+        // Validazione range orario (overlap permesso, solo end < start bloccato)
+        if (event_time && event_end_time && event_time >= event_end_time)
+            return res.status(400).json({ error: "L'ora di fine deve essere successiva all'ora di inizio." });
 
         await pool.execute(
             `UPDATE events

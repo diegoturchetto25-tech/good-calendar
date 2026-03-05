@@ -471,10 +471,48 @@ function Dashboard({ auth, onLogout }) {
         else setPadrePioThought('');
     }, [activeCalId, calendars, currentDate]);
 
-    // ── Event styling by source ──
-    const eventStyle = (ev) => {
+    // ── Overlap detection helpers ────────────────────────────────
+    const timeToMinutes = (t) => {
+        if (!t) return null;
+        const [h, m] = t.substring(0, 5).split(':').map(Number);
+        return h * 60 + m;
+    };
+
+    // Returns true if two events overlap in time on the same date
+    const eventsOverlap = (a, b) => {
+        if (a.event_date !== b.event_date) return false;
+        const aStart = timeToMinutes(a.start_time || a.event_time);
+        const aEnd   = timeToMinutes(a.end_time   || a.event_end_time);
+        const bStart = timeToMinutes(b.start_time || b.event_time);
+        const bEnd   = timeToMinutes(b.end_time   || b.event_end_time);
+        if (aStart === null || aEnd === null || bStart === null || bEnd === null) return false;
+        return aStart < bEnd && aEnd > bStart;
+    };
+
+    // Returns a Set of event ids that overlap with at least one other event
+    const getOverlappingIds = (evList) => {
+        const ids = new Set();
+        for (let i = 0; i < evList.length; i++) {
+            for (let j = i + 1; j < evList.length; j++) {
+                if (eventsOverlap(evList[i], evList[j])) {
+                    ids.add(evList[i].id + '-' + evList[i].source);
+                    ids.add(evList[j].id + '-' + evList[j].source);
+                }
+            }
+        }
+        return ids;
+    };
+
+    // ── Event styling by source + overlap state ───────────────────
+    const eventStyle = (ev, isOverlapping) => {
+        if (isOverlapping) {
+            // Striped gradient to signal overlap — visible regardless of type
+            if (ev.source === 'office')
+                return 'text-orange-900 border border-orange-400 bg-gradient-to-r from-amber-200 via-orange-100 to-red-100 font-semibold';
+            return 'text-purple-900 border border-purple-400 bg-gradient-to-r from-indigo-200 via-purple-100 to-pink-100 font-semibold';
+        }
         if (ev.source === 'office') return 'bg-amber-100 text-amber-800 border-l-2 border-amber-400';
-        return 'bg-indigo-100 text-indigo-800';
+        return 'bg-indigo-100 text-indigo-800 border-l-2 border-indigo-300';
     };
 
     const eventDotColor = (ev) => ev.source === 'office' ? 'bg-amber-400' : 'bg-indigo-400';
@@ -488,33 +526,49 @@ function Dashboard({ auth, onLogout }) {
         const days = [];
         const todayStr = new Date().toISOString().split('T')[0];
 
-        for (let i = 0; i < (firstDay === 0 ? 6 : firstDay - 1); i++)
+        // Empty cells before the 1st of the month (Monday-based grid)
+        for (let i = 0; i < (firstDay === 0 ? 6 : firstDay - 1); i++) {
             days.push(<div key={`e-${i}`} className="bg-gray-50 border border-gray-100 min-h-[90px]"></div>);
+        }
 
         for (let d = 1; d <= daysInMonth; d++) {
             const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
             const dayEvents = events.filter(e => e.event_date && e.event_date.startsWith(dateStr));
+            const dayOverlapIds = getOverlappingIds(dayEvents);
             const isToday = todayStr === dateStr;
+
             days.push(
                 <div key={d}
                     className={`min-h-[90px] bg-white border border-gray-200 p-1.5 cursor-pointer hover:bg-blue-50 transition ${isToday ? 'ring-2 ring-inset ring-indigo-500' : ''}`}
                     onClick={() => { setSelectedDate(dateStr); setEditEvent(null); setShowNewEvent(true); }}>
+
+                    {/* Day number */}
                     <div className={`text-xs font-bold mb-1 ${isToday ? 'text-indigo-600' : 'text-gray-600'}`}>{d}</div>
+
+                    {/* Event chips */}
                     <div className="space-y-0.5">
-                        {dayEvents.slice(0,3).map(ev => (
-                            <div key={`${ev.id}-${ev.source}`}
-                                onClick={e => {
-                                    e.stopPropagation();
-                                    // Utenti normali non possono editare eventi ufficio
-                                    if (ev.source === 'office' && !['capo','admin'].includes(role)) return;
-                                    setEditEvent(ev);
-                                    setShowNewEvent(true);
-                                }}
-                                className={`text-xs px-1.5 py-0.5 rounded truncate cursor-pointer hover:opacity-80 transition ${eventStyle(ev)}`}
-                                title={`${ev.source === 'office' ? '[Ufficio] ' : ''}${ev.title} — clicca per modificare`}>
-                                {ev.event_time ? ev.event_time.substring(0,5) + ' ' : ''}{ev.title}
-                            </div>
-                        ))}
+                        {dayEvents.slice(0, 3).map(ev => {
+                            const key = `${ev.id}-${ev.source}`;
+                            const isOvlp = dayOverlapIds.has(key);
+                            const timeLabel = (ev.start_time || ev.event_time)
+                                ? (ev.start_time || ev.event_time).substring(0, 5) + ' '
+                                : '';
+                            return (
+                                <div key={key}
+                                    onClick={e => {
+                                        e.stopPropagation();
+                                        if (ev.source === 'office' && !['capo','admin'].includes(role)) return;
+                                        setEditEvent(ev);
+                                        setShowNewEvent(true);
+                                    }}
+                                    className={`text-xs px-1.5 py-0.5 rounded truncate cursor-pointer hover:opacity-80 transition ${eventStyle(ev, isOvlp)}`}
+                                    title={`${ev.source === 'office' ? '[Ufficio] ' : ''}${ev.title}${isOvlp ? ' ⚠ Sovrapposizione' : ''}`}>
+                                    {isOvlp ? '⚠ ' : ''}{timeLabel}{ev.title}
+                                </div>
+                            );
+                        })}
+
+                        {/* Overflow counter */}
                         {dayEvents.length > 3 && (
                             <div className="text-xs text-gray-400 pl-1">+{dayEvents.length - 3} altri</div>
                         )}
@@ -525,18 +579,37 @@ function Dashboard({ auth, onLogout }) {
 
         return (
             <div className="fade-in">
+                {/* Day-of-week header */}
                 <div className="grid grid-cols-7 gap-px bg-gray-200 mb-px rounded-t-lg overflow-hidden">
                     {['Lun','Mar','Mer','Gio','Ven','Sab','Dom'].map(d => (
                         <div key={d} className="bg-gray-100 text-center py-2 text-xs font-semibold text-gray-500 uppercase">{d}</div>
                     ))}
                 </div>
-                <div className="grid grid-cols-7 gap-px bg-gray-200 rounded-b-lg overflow-hidden">{days}</div>
 
-                {/* Legenda colori — solo in vista Personale */}
+                {/* Day cells */}
+                <div className="grid grid-cols-7 gap-px bg-gray-200 rounded-b-lg overflow-hidden">
+                    {days}
+                </div>
+
+                {/* Legend — only in Personal calendar view */}
                 {activeCalendar?.type === 'Personale' && (
-                    <div className="mt-3 flex items-center space-x-4 text-xs text-gray-500">
-                        <span className="flex items-center space-x-1"><span className="w-2.5 h-2.5 rounded bg-indigo-400 inline-block"></span><span>Personale</span></span>
-                        <span className="flex items-center space-x-1"><span className="w-2.5 h-2.5 rounded bg-amber-400 inline-block"></span><span>Ufficio (condiviso)</span></span>
+                    <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-gray-500">
+                        <span className="flex items-center space-x-1.5">
+                            <span className="w-3 h-3 rounded bg-indigo-400 inline-block border-l-2 border-indigo-600"></span>
+                            <span>Personale</span>
+                        </span>
+                        <span className="flex items-center space-x-1.5">
+                            <span className="w-3 h-3 rounded bg-amber-300 inline-block border-l-2 border-amber-500"></span>
+                            <span>Ufficio (condiviso)</span>
+                        </span>
+                        <span className="flex items-center space-x-1.5">
+                            <span className="w-3 h-3 rounded inline-block border border-purple-400" style={{background:'linear-gradient(to right,#c7d2fe,#f3e8ff)'}}></span>
+                            <span>Personale sovrapposto</span>
+                        </span>
+                        <span className="flex items-center space-x-1.5">
+                            <span className="w-3 h-3 rounded inline-block border border-orange-400" style={{background:'linear-gradient(to right,#fde68a,#fed7aa)'}}></span>
+                            <span>Ufficio sovrapposto</span>
+                        </span>
                     </div>
                 )}
             </div>
@@ -546,54 +619,77 @@ function Dashboard({ auth, onLogout }) {
     const renderGiorno = () => {
         const dateStr = currentDate.toISOString().split('T')[0];
         const dayEvents = events.filter(e => e.event_date && e.event_date.startsWith(dateStr));
+        const overlapIds = getOverlappingIds(dayEvents);
+
         return (
             <div className="bg-white rounded-xl shadow p-6 fade-in min-h-[400px]">
                 <h3 className="text-xl font-bold text-gray-800 border-b pb-4 mb-4 capitalize">
                     {currentDate.toLocaleDateString('it-IT', { weekday:'long', year:'numeric', month:'long', day:'numeric' })}
                 </h3>
                 {dayEvents.length === 0 ? (
-                    <p className="text-gray-400 text-center py-12 italic">Nessun evento.</p>
+                    <p className="text-gray-400 text-center py-12 italic">Nessun evento per questa giornata.</p>
                 ) : (
-                    <ul className="space-y-3">
-                        {dayEvents.map(ev => (
-                            <li key={`${ev.id}-${ev.source}`}
-                                className={`flex border-l-4 p-4 rounded-r-lg shadow-sm ${ev.source === 'office' ? 'border-amber-400 bg-amber-50' : 'border-indigo-500 bg-gray-50'}`}>
-                                <div className={`font-bold w-28 flex-shrink-0 text-sm ${ev.source === 'office' ? 'text-amber-600' : 'text-indigo-600'}`}>
-                                    {ev.event_time ? `${ev.event_time.substring(0,5)}${ev.event_end_time ? '–'+ev.event_end_time.substring(0,5) : ''}` : 'Tutto il giorno'}
-                                </div>
-                                <div className="flex-1">
-                                    <div className="flex items-center space-x-2">
-                                        <h4 className="font-semibold text-gray-800">{ev.title}</h4>
-                                        {ev.source === 'office' && (
-                                            <span className="text-xs bg-amber-200 text-amber-700 px-1.5 py-0.5 rounded font-medium">Ufficio</span>
-                                        )}
+                    <ul className="space-y-2">
+                        {dayEvents.map(ev => {
+                            const key = `${ev.id}-${ev.source}`;
+                            const isOvlp = overlapIds.has(key);
+                            const isOffice = ev.source === 'office';
+                            const startT = ev.start_time || ev.event_time;
+                            const endT   = ev.end_time   || ev.event_end_time;
+                            const borderColor = isOvlp
+                                ? (isOffice ? 'border-orange-400' : 'border-purple-400')
+                                : (isOffice ? 'border-amber-400'  : 'border-indigo-400');
+                            const bgColor = isOvlp
+                                ? (isOffice ? 'bg-orange-50' : 'bg-purple-50')
+                                : (isOffice ? 'bg-amber-50'  : 'bg-gray-50');
+                            const timeColor = isOvlp
+                                ? (isOffice ? 'text-orange-600' : 'text-purple-600')
+                                : (isOffice ? 'text-amber-600'  : 'text-indigo-600');
+                            return (
+                                <li key={key} className={`flex border-l-4 ${borderColor} ${bgColor} p-3 rounded-r-lg shadow-sm`}>
+                                    <div className={`font-bold w-28 flex-shrink-0 text-sm ${timeColor}`}>
+                                        {startT
+                                            ? `${startT.substring(0,5)}${endT ? '–' + endT.substring(0,5) : ''}`
+                                            : 'Tutto il giorno'}
                                     </div>
-                                    {ev.description && <p className="text-sm text-gray-500 mt-0.5">{ev.description}</p>}
-                                </div>
-                                {/* Pulsanti modifica ed elimina — solo per chi ha i permessi */}
-                                {(ev.source === 'office' ? ['capo','admin'].includes(role) : true) && (
-                                    <div className="flex items-center space-x-1 ml-3 flex-shrink-0">
-                                        <button
-                                            onClick={e => { e.stopPropagation(); setEditEvent(ev); setShowNewEvent(true); }}
-                                            className="p-1 text-gray-300 hover:text-indigo-500 transition" title="Modifica evento">
-                                            <i className="ph ph-pencil text-base"></i>
-                                        </button>
-                                        <button
-                                            onClick={async (e) => {
-                                                e.stopPropagation();
-                                                if (!confirm(`Eliminare "${ev.title}"?`)) return;
-                                                try {
-                                                    await fetchAPI(`/events/${ev.id}`, { method: 'DELETE', headers: authHeaders });
-                                                    loadEvents(activeCalId);
-                                                } catch (err) { alert(err.message); }
-                                            }}
-                                            className="p-1 text-gray-300 hover:text-red-400 transition" title="Elimina evento">
-                                            <i className="ph ph-trash text-base"></i>
-                                        </button>
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex items-center flex-wrap gap-1.5">
+                                            <h4 className="font-semibold text-gray-800 truncate">{ev.title}</h4>
+                                            {isOffice && (
+                                                <span className="text-xs bg-amber-200 text-amber-700 px-1.5 py-0.5 rounded font-medium flex-shrink-0">Ufficio</span>
+                                            )}
+                                            {isOvlp && (
+                                                <span className="text-xs bg-red-100 text-red-600 border border-red-300 px-1.5 py-0.5 rounded font-medium flex-shrink-0">
+                                                    ⚠ Sovrapposizione
+                                                </span>
+                                            )}
+                                        </div>
+                                        {ev.description && <p className="text-xs text-gray-500 mt-0.5 truncate">{ev.description}</p>}
                                     </div>
-                                )}
-                            </li>
-                        ))}
+                                    {(isOffice ? ['capo','admin'].includes(role) : true) && (
+                                        <div className="flex items-center space-x-1 ml-2 flex-shrink-0">
+                                            <button
+                                                onClick={e => { e.stopPropagation(); setEditEvent(ev); setShowNewEvent(true); }}
+                                                className="p-1 text-gray-300 hover:text-indigo-500 transition" title="Modifica">
+                                                <i className="ph ph-pencil text-base"></i>
+                                            </button>
+                                            <button
+                                                onClick={async (e) => {
+                                                    e.stopPropagation();
+                                                    if (!confirm(`Eliminare "${ev.title}"?`)) return;
+                                                    try {
+                                                        await fetchAPI(`/events/${ev.id}`, { method: 'DELETE', headers: authHeaders });
+                                                        loadEvents(activeCalId);
+                                                    } catch (err) { alert(err.message); }
+                                                }}
+                                                className="p-1 text-gray-300 hover:text-red-400 transition" title="Elimina">
+                                                <i className="ph ph-trash text-base"></i>
+                                            </button>
+                                        </div>
+                                    )}
+                                </li>
+                            );
+                        })}
                     </ul>
                 )}
                 <button onClick={() => { setSelectedDate(dateStr); setEditEvent(null); setShowNewEvent(true); }}
@@ -603,38 +699,6 @@ function Dashboard({ auth, onLogout }) {
             </div>
         );
     };
-
-    const renderAnno = () => (
-        <div className="bg-white rounded-xl shadow p-8 text-center fade-in">
-            <h3 className="text-3xl font-bold text-gray-800 mb-2">{currentDate.getFullYear()}</h3>
-            <p className="text-gray-400 mb-7 text-sm">Seleziona un mese per visualizzarne il dettaglio.</p>
-            <div className="grid grid-cols-3 md:grid-cols-4 gap-4">
-                {Array.from({length:12}).map((_,i) => {
-                    const count = events.filter(e => {
-                        if (!e.event_date) return false;
-                        const d = new Date(e.event_date);
-                        return d.getFullYear() === currentDate.getFullYear() && d.getMonth() === i;
-                    });
-                    return (
-                        <div key={i}
-                            onClick={() => { const nd = new Date(currentDate); nd.setMonth(i); setCurrentDate(nd); setView('Mese'); }}
-                            className="p-4 border rounded-lg hover:bg-indigo-50 hover:border-indigo-300 cursor-pointer transition">
-                            <div className="font-semibold text-gray-700 capitalize text-sm">
-                                {new Date(2020,i,1).toLocaleDateString('it-IT',{month:'long'})}
-                            </div>
-                            <div className="flex items-center justify-center mt-2 space-x-2">
-                                {count.filter(e=>e.source!=='office').length > 0 &&
-                                    <span className="text-xs bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded">{count.filter(e=>e.source!=='office').length} pers.</span>}
-                                {count.filter(e=>e.source==='office').length > 0 &&
-                                    <span className="text-xs bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded">{count.filter(e=>e.source==='office').length} uff.</span>}
-                                {count.length === 0 && <span className="text-xs text-gray-300">nessuno</span>}
-                            </div>
-                        </div>
-                    );
-                })}
-            </div>
-        </div>
-    );
 
     // ── Navigation ───────────────────────────────────────────
     const navigate = (dir) => {
