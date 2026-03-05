@@ -38,14 +38,20 @@ Getting the project up and running is straightforward thanks to Docker. Follow t
 
 3. **Build and start the containers**  
    Use Docker Compose to build the images and start the database, backend, and frontend services simultaneously:  
-   ```bash docker-compose up -d```
+   ```bash
+   docker-compose up -d
+   ```
 
 4. **Access the application**  
+   ```bash
    Once the containers are running, open your web browser and navigate to:  
    http://localhost
+   ```
 
+   ```bash
 5. **Test the Application**  
    You can log in and test the application using the following default mock credentials provisioned in the database:
+   ```
 
 | Username | Email | Password |
 | :---- | :---- | :---- |
@@ -58,4 +64,6 @@ Getting the project up and running is straightforward thanks to Docker. Follow t
 ### **Stopping the Application**
 
 To stop the running containers, run the following command in another terminal window within the project directory:  
-```bash docker-compose down```
+```bash
+docker-compose down
+```
