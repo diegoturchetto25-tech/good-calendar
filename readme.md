@@ -51,13 +51,13 @@ Getting the project up and running is straightforward thanks to Docker. Follow t
 5. **Test the Application**  
    You can log in and test the application using the following default mock credentials provisioned in the database:
 
-| Username | Email | Password |
-| :---- | :---- | :---- |
-| `admin` | `admin@calendar.local` | `password` |
-| `mario` | `mario.rossi@test.local` | `password` |
-| `luisa` | `luisa.verdi@test.local` | `password` |
-| `diego` | `diego.turchetto@test.local` | `password` |
-| `daniele` | `daniele.gobbo@test.local` | `password` |
+| Email | Password |
+| :---- | :---- |
+| `admin@calendar.local` | `password` |
+| `mario.rossi@test.local` | `password` |
+| `luisa.verdi@test.local` | `password` |
+| `diego.turchetto@test.local` | `password` |
+| `daniele.gobbo@test.local` | `password` |
 
 ### **Stopping the Application**
 
