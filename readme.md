@@ -3,7 +3,7 @@
 ## **🎯 Goal of the Project**
 
 The primary goal of **Good Calendar** is to create a robust, multi-user calendar application equipped with a dedicated permissions system.  
-A core focus of this project is smart schedule management: the system is designed to prevent scheduling conflicts by ensuring that appointments booked in the **Office** calendar can never overlap with events scheduled in the **Personal** calendar. This guarantees a clean separation of work and private life without double-booking.
+A core focus of this project is smart schedule management: the system is designed to warn users about potential scheduling conflicts. If an appointment booked in the **Office** calendar overlaps with an event scheduled in the **Personal** calendar, the system will alert the user while still allowing the bookings to overlap. This encourages a clean separation of work and private life while maintaining flexibility for the user.
 
 ## **🛠️ Technology Stack**
 
