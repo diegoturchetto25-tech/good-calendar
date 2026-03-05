@@ -3,7 +3,7 @@
 ## **🎯 Goal of the Project**
 
 The primary goal of **Good Calendar** is to create a robust, multi-user calendar application equipped with a dedicated permissions system.  
-A core focus of this project is smart schedule management: the system is designed to prevent scheduling conflicts by ensuring that appointments booked in the **Office** calendar can never overlap with events scheduled in the **Personal** calendar. This guarantees a clean separation of work and private life without double-booking.
+A core focus of this project is smart schedule management: the system is designed to warn users about potential scheduling conflicts. If an appointment booked in the **Office** calendar overlaps with an event scheduled in the **Personal** calendar, the system will alert the user while still allowing the bookings to overlap. This encourages a clean separation of work and private life while maintaining flexibility for the user.
 
 ## **🛠️ Technology Stack**
 
@@ -28,18 +28,25 @@ Getting the project up and running is straightforward thanks to Docker. Follow t
 
 1. **Clone the repository**  
    Open your terminal and clone the project to your local machine:  
-   ```bash git clone \[https://github.com/diegoturchetto25-tech/good-calendar.git\](https://github.com/diegoturchetto25-tech/good-calendar.git)```
+   ```bash
+   git clone \[https://github.com/diegoturchetto25-tech/good-calendar.git\](https://github.com/diegoturchetto25-tech/good-calendar.git)```
 
 2. **Navigate to the project directory**  
-   ```bash cd good-calendar```
+   ```bash
+   cd good-calendar
+   ```
 
 3. **Build and start the containers**  
    Use Docker Compose to build the images and start the database, backend, and frontend services simultaneously:  
-   ```bash docker-compose up -d```
+   ```bash
+   docker-compose up -d
+   ```
 
 4. **Access the application**  
-   Once the containers are running, open your web browser and navigate to:  
+   Once the containers are running, open your web browser and navigate to: 
+   ```bash
    http://localhost
+   ```
 
 5. **Test the Application**  
    You can log in and test the application using the following default mock credentials provisioned in the database:
@@ -55,4 +62,6 @@ Getting the project up and running is straightforward thanks to Docker. Follow t
 ### **Stopping the Application**
 
 To stop the running containers, run the following command in another terminal window within the project directory:  
-```bash docker-compose down```
+```bash
+docker-compose down
+```
