@@ -43,15 +43,13 @@ Getting the project up and running is straightforward thanks to Docker. Follow t
    ```
 
 4. **Access the application**  
+   Once the containers are running, open your web browser and navigate to: 
    ```bash
-   Once the containers are running, open your web browser and navigate to:  
    http://localhost
    ```
 
-   ```bash
 5. **Test the Application**  
    You can log in and test the application using the following default mock credentials provisioned in the database:
-   ```
 
 | Username | Email | Password |
 | :---- | :---- | :---- |
