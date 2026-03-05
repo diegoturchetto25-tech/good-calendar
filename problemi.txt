@@ -1,0 +1,2 @@
+1. stondare il calendario
+2. problematica orgoglio quando ci clicco si apre direttamente il selettore

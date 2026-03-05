@@ -3,24 +3,411 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Multi-Calendar App</title>
+    <title>Calendari — Liquid Glass</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
     <style>
-        body { background-color: #f3f4f6; font-family: 'Inter', sans-serif; }
-        .fade-in { animation: fadeIn 0.25s ease-in-out; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+        :root {
+            --glass:            rgba(255,255,255,0.22);
+            --glass-hover:      rgba(255,255,255,0.34);
+            --glass-border:     rgba(255,255,255,0.60);
+            --glass-border-sub: rgba(255,255,255,0.30);
+            --shadow:     0 8px 32px rgba(80,100,160,0.10), 0 2px 8px rgba(80,100,160,0.07), inset 0 1px 0 rgba(255,255,255,0.70);
+            --shadow-lg:  0 24px 64px rgba(60,80,140,0.13), 0 6px 20px rgba(60,80,140,0.08), inset 0 1px 0 rgba(255,255,255,0.80);
+            --shadow-xl:  0 40px 100px rgba(40,60,120,0.18), 0 12px 36px rgba(40,60,120,0.10), inset 0 1px 0 rgba(255,255,255,0.85);
+            --blur:  blur(24px) saturate(180%);
+            --blurL: blur(40px) saturate(200%);
+            --blue:   #0A84FF;
+            --violet: #5E5CE6;
+            --green:  #30D158;
+            --amber:  #FF9F0A;
+            --red:    #FF453A;
+            --font: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", sans-serif;
+        }
+        *, *::before, *::after { box-sizing: border-box; }
+        html, body { height: 100%; margin: 0; padding: 0; overflow: hidden; }
+        body {
+            font-family: var(--font);
+            -webkit-font-smoothing: antialiased;
+            background:
+                radial-gradient(ellipse 80% 60% at 15% 10%,  rgba(120,160,255,0.24) 0%, transparent 60%),
+                radial-gradient(ellipse 70% 50% at 85% 20%,  rgba(160,120,255,0.18) 0%, transparent 55%),
+                radial-gradient(ellipse 60% 70% at 50% 90%,  rgba(80,200,180,0.16) 0%, transparent 60%),
+                linear-gradient(160deg, #e9eef8 0%, #e4e0f5 35%, #ddeef6 65%, #e6f0ea 100%);
+        }
+        #root { position: relative; z-index: 1; height: 100vh; }
+
+        /* Orbs */
+        #orbs { position:fixed; inset:0; pointer-events:none; z-index:0; overflow:hidden; }
+        .orb  { position:absolute; border-radius:50%; filter:blur(60px); }
+        @keyframes drift {
+            0%   { transform: translate(0,0) scale(1); }
+            50%  { transform: translate(15px,-12px) scale(1.04); }
+            100% { transform: translate(-8px,14px) scale(0.97); }
+        }
+
+        /* Glass primitives */
+        .glass {
+            background: var(--glass);
+            backdrop-filter: var(--blur);
+            -webkit-backdrop-filter: var(--blur);
+            border: 1px solid var(--glass-border);
+            box-shadow: var(--shadow);
+        }
+        .glass-lg {
+            background: var(--glass);
+            backdrop-filter: var(--blurL);
+            -webkit-backdrop-filter: var(--blurL);
+            border: 1px solid var(--glass-border);
+            box-shadow: var(--shadow-lg);
+        }
+        .glass-xl {
+            background: rgba(255,255,255,0.28);
+            backdrop-filter: var(--blurL);
+            -webkit-backdrop-filter: var(--blurL);
+            border: 1px solid rgba(255,255,255,0.68);
+            box-shadow: var(--shadow-xl);
+        }
+        .glass-inset {
+            background: rgba(255,255,255,0.16);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255,255,255,0.35);
+        }
+
+        /* Inputs */
+        .g-input {
+            background: rgba(255,255,255,0.30);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            border: 1px solid rgba(255,255,255,0.55);
+            box-shadow: inset 0 1px 3px rgba(0,0,0,0.06), 0 1px 0 rgba(255,255,255,0.8);
+            border-radius: 12px; padding: 10px 14px;
+            font-family: var(--font); font-size: 14px; color: #1a1a2e;
+            width: 100%; outline: none; transition: all .2s;
+        }
+        .g-input::placeholder { color: rgba(60,60,120,0.35); }
+        .g-input:focus {
+            background: rgba(255,255,255,0.48);
+            border-color: rgba(10,132,255,0.5);
+            box-shadow: inset 0 1px 3px rgba(0,0,0,0.04), 0 0 0 3px rgba(10,132,255,0.12), 0 1px 0 rgba(255,255,255,0.9);
+        }
+        select.g-input { cursor: pointer; }
+        textarea.g-input { resize: none; }
+
+        /* Buttons */
+        .btn-p {
+            background: linear-gradient(160deg, rgba(10,132,255,0.92), rgba(10,100,240,0.96));
+            border: 1px solid rgba(10,132,255,0.40);
+            box-shadow: 0 4px 16px rgba(10,132,255,0.30), inset 0 1px 0 rgba(255,255,255,0.25);
+            color: #fff; border-radius: 12px; padding: 10px 20px;
+            font-family: var(--font); font-size: 14px; font-weight: 600;
+            cursor: pointer; transition: all .2s; letter-spacing: -.01em;
+        }
+        .btn-p:hover { box-shadow: 0 6px 24px rgba(10,132,255,0.40), inset 0 1px 0 rgba(255,255,255,0.30); transform: translateY(-1px); }
+        .btn-p:disabled { opacity:.5; cursor:not-allowed; transform:none; }
+        .btn-g {
+            background: var(--glass); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+            border: 1px solid var(--glass-border); box-shadow: var(--shadow);
+            border-radius: 12px; padding: 9px 18px;
+            font-family: var(--font); font-size: 14px; font-weight: 500;
+            color: rgba(30,30,80,0.75); cursor: pointer; transition: all .2s;
+        }
+        .btn-g:hover { background: var(--glass-hover); transform: translateY(-1px); }
+
+        /* Text */
+        .tp  { color: rgba(15,15,40,0.88); }
+        .ts  { color: rgba(40,40,90,0.55); }
+        .tm  { color: rgba(60,60,120,0.38); }
+        .ta  { color: var(--blue); }
+        .tv  { color: var(--violet); }
+
+        /* Calendar cells */
+        .cal-cell {
+            background: rgba(255,255,255,0.16); border: 1px solid rgba(255,255,255,0.36);
+            border-radius: 13px; min-height: 90px; padding: 8px;
+            cursor: pointer; transition: all .18s ease; position: relative; overflow: hidden;
+        }
+        .cal-cell::after {
+            content:''; position:absolute; top:0; left:0; right:0; height:1px;
+            background:linear-gradient(90deg,transparent,rgba(255,255,255,0.72),transparent);
+        }
+        .cal-cell:hover {
+            background: rgba(255,255,255,0.30); border-color: rgba(255,255,255,0.58);
+            box-shadow: 0 4px 20px rgba(10,132,255,0.10), inset 0 1px 0 rgba(255,255,255,0.75);
+            transform: translateY(-1px);
+        }
+        .cal-today {
+            background: linear-gradient(145deg,rgba(10,132,255,0.14),rgba(94,92,230,0.10));
+            border: 1.5px solid rgba(10,132,255,0.42);
+            box-shadow: 0 4px 20px rgba(10,132,255,0.14), inset 0 1px 0 rgba(255,255,255,0.65);
+        }
+        .cal-empty { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.14); border-radius: 13px; min-height: 90px; }
+        .day-num-today {
+            display:inline-flex; align-items:center; justify-content:center;
+            width:22px; height:22px; border-radius:50%;
+            background: linear-gradient(145deg,var(--blue),var(--violet));
+            color:#fff; font-size:11px; font-weight:700;
+            box-shadow: 0 2px 8px rgba(10,132,255,0.35);
+        }
+
+        /* Event chips */
+        .chip { font-size:10.5px; font-weight:500; padding:2px 7px; border-radius:6px; backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); border:1px solid transparent; cursor:pointer; transition:all .15s; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; display:block; line-height:1.6; }
+        .chip:hover { opacity:.82; transform:translateX(1px); }
+        .chip-p   { background:linear-gradient(90deg,rgba(10,132,255,0.18),rgba(94,92,230,0.12)); border-color:rgba(10,132,255,0.25); color:rgba(0,60,180,0.90); }
+        .chip-o   { background:linear-gradient(90deg,rgba(255,159,10,0.20),rgba(255,180,50,0.12)); border-color:rgba(255,159,10,0.30); color:rgba(140,70,0,0.90); }
+        .chip-ov  { background:linear-gradient(90deg,rgba(255,69,58,0.16),rgba(255,159,10,0.12)); border-color:rgba(255,69,58,0.28); color:rgba(160,30,20,0.90); }
+
+        /* Event cards (sidebar) */
+        .ev-card { background:rgba(255,255,255,0.22); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px); border:1px solid rgba(255,255,255,0.45); border-radius:13px; box-shadow:0 2px 10px rgba(80,100,160,0.06),inset 0 1px 0 rgba(255,255,255,0.65); transition:all .18s; position:relative; overflow:hidden; }
+        .ev-card::after { content:''; position:absolute; top:0; left:0; right:0; height:1px; background:linear-gradient(90deg,transparent,rgba(255,255,255,0.80),transparent); }
+        .ev-card:hover { background:rgba(255,255,255,0.34); box-shadow:0 4px 16px rgba(80,100,160,0.10),inset 0 1px 0 rgba(255,255,255,0.75); transform:translateX(2px); }
+
+        /* Badges */
+        .badge { font-size:11px; font-weight:600; padding:2px 9px; border-radius:20px; letter-spacing:.01em; }
+        .ba  { background:rgba(94,92,230,0.15); border:1px solid rgba(94,92,230,0.30); color:var(--violet); }
+        .bc  { background:rgba(255,159,10,0.15); border:1px solid rgba(255,159,10,0.30); color:rgba(160,80,0,.90); }
+        .bu  { background:rgba(80,100,160,0.10); border:1px solid rgba(80,100,160,0.20); color:rgba(40,50,120,.70); }
+
+        /* Status boxes */
+        .box-err { background:rgba(255,69,58,0.10); border:1px solid rgba(255,69,58,0.22); border-radius:12px; padding:10px 14px; color:rgba(180,20,10,.85); font-size:13px; }
+        .box-ok  { background:rgba(48,209,88,0.10); border:1px solid rgba(48,209,88,0.25); border-radius:12px; padding:10px 14px; color:rgba(0,120,40,.85); font-size:13px; }
+
+        /* Modal */
+        .modal-bg { position:fixed; inset:0; z-index:50; background:rgba(20,20,60,0.32); backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px); display:flex; align-items:center; justify-content:center; padding:16px; }
+
+        /* Sidebar cal btn */
+        .cbtn { width:100%; display:flex; align-items:center; padding:9px 12px; border-radius:12px; cursor:pointer; transition:all .18s; background:transparent; border:1px solid transparent; font-family:var(--font); font-size:13.5px; font-weight:500; color:rgba(30,30,80,.70); text-align:left; }
+        .cbtn:hover { background:rgba(255,255,255,0.28); border-color:rgba(255,255,255,0.48); }
+        .cbtn.active { background:linear-gradient(135deg,rgba(10,132,255,0.18),rgba(94,92,230,0.12)); border-color:rgba(10,132,255,0.28); color:rgba(0,50,170,.90); font-weight:600; box-shadow:0 2px 10px rgba(10,132,255,0.10),inset 0 1px 0 rgba(255,255,255,0.60); }
+
+        /* View switcher */
+        .vsw { display:flex; background:rgba(255,255,255,0.20); border:1px solid rgba(255,255,255,0.45); border-radius:12px; padding:3px; backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px); }
+        .vbtn { padding:5px 14px; border-radius:9px; font-size:13px; font-weight:500; cursor:pointer; transition:all .18s; background:transparent; border:none; color:rgba(30,30,80,.55); font-family:var(--font); }
+        .vbtn.active { background:rgba(255,255,255,0.72); color:rgba(10,132,255,.95); font-weight:600; box-shadow:0 2px 8px rgba(10,132,255,0.12),0 1px 3px rgba(0,0,0,0.06); }
+
+        /* Scrollbars */
+        ::-webkit-scrollbar { width:4px; height:4px; }
+        ::-webkit-scrollbar-track { background:transparent; }
+        ::-webkit-scrollbar-thumb { background:rgba(100,120,200,0.20); border-radius:4px; }
+
+        /* Animations */
+        @keyframes fadeUp { from { opacity:0; transform:translateY(10px) scale(.98); } to { opacity:1; transform:none; } }
+        @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
+        .fu { animation: fadeUp .28s cubic-bezier(.22,1,.36,1) both; }
+        .fi { animation: fadeIn .22s ease both; }
+
+        /* Section label */
+        .slabel { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:rgba(60,60,120,.42); }
+
+        /* Glass separator */
+        .gsep { height:1px; background:linear-gradient(90deg,transparent,rgba(255,255,255,0.45),transparent); }
+
+        /* Year grid */
+        .yr-cell { background:rgba(255,255,255,0.16); border:1px solid rgba(255,255,255,0.34); border-radius:13px; padding:12px; cursor:pointer; transition:all .18s; }
+        .yr-cell:hover { background:rgba(255,255,255,0.28); box-shadow:0 4px 20px rgba(10,132,255,0.10); transform:translateY(-2px); }
+
+        /* Day view row */
+        .drow { background:rgba(255,255,255,0.20); border:1px solid rgba(255,255,255,0.38); border-radius:12px; padding:10px 14px; transition:all .18s; }
+        .drow:hover { background:rgba(255,255,255,0.32); box-shadow:0 3px 14px rgba(80,100,160,0.09); }
+
+        /* Admin table */
+        .atable th { font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.06em; color:rgba(40,40,90,.50); padding-bottom:10px; border-bottom:1px solid rgba(255,255,255,0.30); }
+        .atable td { padding:10px 12px 10px 0; border-bottom:1px solid rgba(255,255,255,0.20); color:rgba(15,15,40,.80); font-size:13px; }
+        .atable tr:last-child td { border-bottom:none; }
+
+        /* ── Liquid Glass Time Picker ────────────────────────────── */
+        .tp-field {
+            position: relative;
+            width: 100%;
+        }
+        .tp-trigger {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 14px;
+            background: rgba(255,255,255,0.30);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            border: 1px solid rgba(255,255,255,0.55);
+            box-shadow: inset 0 1px 3px rgba(0,0,0,0.06), 0 1px 0 rgba(255,255,255,0.8);
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all .2s ease;
+            font-family: var(--font);
+            font-size: 14px;
+            color: rgba(15,15,40,.88);
+        }
+        .tp-trigger:hover {
+            background: rgba(255,255,255,0.42);
+            border-color: rgba(255,255,255,0.70);
+        }
+        .tp-trigger.open {
+            background: rgba(255,255,255,0.48);
+            border-color: rgba(10,132,255,0.50);
+            box-shadow: inset 0 1px 3px rgba(0,0,0,0.04), 0 0 0 3px rgba(10,132,255,0.12), 0 1px 0 rgba(255,255,255,0.9);
+        }
+        .tp-trigger.invalid {
+            border-color: rgba(255,69,58,0.55);
+            box-shadow: inset 0 1px 3px rgba(0,0,0,0.04), 0 0 0 3px rgba(255,69,58,0.10);
+        }
+        .tp-placeholder { color: rgba(60,60,120,0.38); }
+        .tp-clock-icon { color: rgba(10,132,255,0.65); font-size: 16px; flex-shrink: 0; transition: color .2s; }
+        .tp-trigger.open .tp-clock-icon { color: var(--blue); }
+
+        /* Dropdown panel */
+        .tp-dropdown {
+            position: absolute;
+            top: calc(100% + 8px);
+            left: 0; right: 0;
+            z-index: 200;
+            background: rgba(235,240,255,0.55);
+            backdrop-filter: blur(28px) saturate(200%);
+            -webkit-backdrop-filter: blur(28px) saturate(200%);
+            border: 1px solid rgba(255,255,255,0.70);
+            border-radius: 18px;
+            box-shadow:
+                0 24px 60px rgba(40,60,130,0.18),
+                0 8px 24px rgba(40,60,130,0.10),
+                inset 0 1px 0 rgba(255,255,255,0.90),
+                inset 0 -1px 0 rgba(255,255,255,0.30);
+            overflow: hidden;
+            /* open animation */
+            transform-origin: top center;
+            animation: tpOpen .22s cubic-bezier(.22,1,.36,1) both;
+        }
+        .tp-dropdown::before {
+            content: '';
+            position: absolute; top: 0; left: 0; right: 0; height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.95), transparent);
+            border-radius: 18px 18px 0 0;
+        }
+        @keyframes tpOpen {
+            from { opacity:0; transform: scale(.95) translateY(-6px); }
+            to   { opacity:1; transform: scale(1) translateY(0); }
+        }
+
+        /* Column layout */
+        .tp-columns {
+            display: flex;
+            gap: 0;
+        }
+        .tp-col {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            max-height: 200px;
+            overflow-y: auto;
+            padding: 6px 4px;
+            scrollbar-width: none;
+        }
+        .tp-col::-webkit-scrollbar { display: none; }
+        .tp-col-label {
+            font-size: 9px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: .08em;
+            color: rgba(60,60,130,0.40);
+            text-align: center;
+            padding: 6px 0 4px;
+            position: sticky;
+            top: 0;
+            background: rgba(235,240,255,0.50);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+        }
+        .tp-col-divider {
+            width: 1px;
+            background: linear-gradient(180deg, transparent, rgba(255,255,255,0.45) 20%, rgba(255,255,255,0.45) 80%, transparent);
+            margin: 8px 0;
+            flex-shrink: 0;
+        }
+
+        /* Time option row */
+        .tp-option {
+            padding: 7px 10px;
+            border-radius: 10px;
+            font-size: 13.5px;
+            font-weight: 500;
+            color: rgba(20,20,60,.78);
+            cursor: pointer;
+            text-align: center;
+            transition: all .15s ease;
+            border: 1px solid transparent;
+            margin: 1px 2px;
+            font-family: var(--font);
+            font-variant-numeric: tabular-nums;
+            letter-spacing: .01em;
+        }
+        .tp-option:hover {
+            background: rgba(255,255,255,0.55);
+            border-color: rgba(255,255,255,0.70);
+            box-shadow: 0 2px 12px rgba(10,132,255,0.10), inset 0 1px 0 rgba(255,255,255,0.80);
+            color: rgba(10,132,255,.90);
+            transform: scale(1.02);
+        }
+        .tp-option.selected {
+            background: linear-gradient(145deg, rgba(10,132,255,0.22), rgba(94,92,230,0.14));
+            border-color: rgba(10,132,255,0.35);
+            color: rgba(10,80,210,.95);
+            font-weight: 700;
+            box-shadow: 0 3px 16px rgba(10,132,255,0.18), inset 0 1px 0 rgba(255,255,255,0.70);
+        }
+
+        /* Footer confirm button */
+        .tp-confirm {
+            padding: 10px 16px;
+            border-top: 1px solid rgba(255,255,255,0.35);
+            display: flex;
+            justify-content: flex-end;
+            background: rgba(255,255,255,0.18);
+        }
+        .tp-confirm-btn {
+            padding: 6px 18px;
+            background: linear-gradient(145deg, rgba(10,132,255,0.92), rgba(10,100,240,0.96));
+            border: 1px solid rgba(10,132,255,0.40);
+            box-shadow: 0 3px 12px rgba(10,132,255,0.28), inset 0 1px 0 rgba(255,255,255,0.22);
+            color: #fff;
+            border-radius: 10px;
+            font-size: 12.5px;
+            font-weight: 600;
+            cursor: pointer;
+            font-family: var(--font);
+            transition: all .18s;
+        }
+        .tp-confirm-btn:hover { box-shadow: 0 4px 16px rgba(10,132,255,0.38), inset 0 1px 0 rgba(255,255,255,0.28); transform: translateY(-1px); }
+
+        /* Validation hint */
+        .tp-hint {
+            font-size: 11.5px;
+            color: rgba(220,50,30,.80);
+            margin-top: 5px;
+            padding-left: 2px;
+            animation: fadeIn .18s ease both;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
     </style>
 </head>
 <body>
+
+<!-- Ambient orbs -->
+<div id="orbs">
+    <div class="orb" style="width:500px;height:500px;background:radial-gradient(circle,rgba(100,160,255,0.55),transparent);top:-120px;left:-120px;animation:drift 22s ease-in-out infinite alternate;opacity:.5;"></div>
+    <div class="orb" style="width:400px;height:400px;background:radial-gradient(circle,rgba(160,100,255,0.48),transparent);top:15%;right:-90px;animation:drift 18s ease-in-out infinite alternate-reverse;opacity:.45;"></div>
+    <div class="orb" style="width:350px;height:350px;background:radial-gradient(circle,rgba(80,200,180,0.42),transparent);bottom:8%;left:18%;animation:drift 26s ease-in-out infinite alternate;opacity:.4;"></div>
+    <div class="orb" style="width:280px;height:280px;background:radial-gradient(circle,rgba(255,180,80,0.35),transparent);bottom:22%;right:22%;animation:drift 20s ease-in-out infinite alternate-reverse;opacity:.38;"></div>
+</div>
+
 <div id="root"></div>
 
 <script type="text/babel">
 const { useState, useEffect, useCallback } = React;
-
 const API_BASE = 'http://localhost:5000/api';
 
 async function fetchAPI(endpoint, options = {}) {
@@ -33,12 +420,11 @@ async function fetchAPI(endpoint, options = {}) {
     return data;
 }
 
-// ── Shared small components ──────────────────────────────────
 function ErrorBox({ message }) {
     if (!message) return null;
     return (
-        <div className="mt-3 p-3 bg-red-50 border border-red-300 text-red-700 rounded-lg text-sm flex items-start space-x-2 fade-in">
-            <i className="ph ph-warning-circle text-lg flex-shrink-0 mt-0.5"></i>
+        <div className="box-err fi flex items-start gap-2 mt-3">
+            <i className="ph ph-warning-circle flex-shrink-0 mt-0.5"></i>
             <span>{message}</span>
         </div>
     );
@@ -46,112 +432,95 @@ function ErrorBox({ message }) {
 function SuccessBox({ message }) {
     if (!message) return null;
     return (
-        <div className="mt-3 p-3 bg-green-50 border border-green-300 text-green-700 rounded-lg text-sm flex items-start space-x-2 fade-in">
-            <i className="ph ph-check-circle text-lg flex-shrink-0 mt-0.5"></i>
+        <div className="box-ok fi flex items-start gap-2 mt-3">
+            <i className="ph ph-check-circle flex-shrink-0 mt-0.5"></i>
             <span>{message}</span>
         </div>
     );
 }
-
-// ── Role badge ───────────────────────────────────────────────
 function RoleBadge({ role }) {
-    const cfg = {
-        admin: 'bg-purple-100 text-purple-700',
-        capo:  'bg-amber-100 text-amber-700',
-        user:  'bg-gray-100 text-gray-600'
-    };
-    const label = { admin: 'Admin', capo: 'Capo', user: 'Utente' };
-    return (
-        <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${cfg[role] || cfg.user}`}>
-            {label[role] || role}
-        </span>
-    );
+    const cls   = { admin:'ba', capo:'bc', user:'bu' };
+    const label = { admin:'Admin', capo:'Capo', user:'Utente' };
+    return <span className={`badge ${cls[role]||cls.user}`}>{label[role]||role}</span>;
 }
 
-// ── App root ─────────────────────────────────────────────────
+// ── App ───────────────────────────────────────────────────────
 function App() {
-    const [authState, setAuthState] = useState(null); // { username, token, role }
-    if (!authState) return <Login onLogin={setAuthState} />;
-    return <Dashboard auth={authState} onLogout={() => setAuthState(null)} />;
+    const [auth, setAuth] = useState(null);
+    if (!auth) return <Login onLogin={setAuth} />;
+    return <Dashboard auth={auth} onLogout={() => setAuth(null)} />;
 }
 
-// ── Login / Register ─────────────────────────────────────────
+// ── Login ─────────────────────────────────────────────────────
 function Login({ onLogin }) {
-    const [isLogin, setIsLogin] = useState(true);
+    const [isLogin,  setIsLogin]  = useState(true);
     const [username, setUsername] = useState('');
-    const [email, setEmail]       = useState('');
+    const [email,    setEmail]    = useState('');
     const [password, setPassword] = useState('');
-    const [loading, setLoading]   = useState(false);
-    const [error, setError]       = useState('');
-    const [success, setSuccess]   = useState('');
+    const [loading,  setLoading]  = useState(false);
+    const [error,    setError]    = useState('');
+    const [success,  setSuccess]  = useState('');
 
     const reset = () => { setError(''); setSuccess(''); setUsername(''); setEmail(''); setPassword(''); };
     const switchMode = () => { setIsLogin(!isLogin); reset(); };
 
     const handleSubmit = async (e) => {
-        e.preventDefault();
-        setError(''); setSuccess(''); setLoading(true);
+        e.preventDefault(); setError(''); setSuccess(''); setLoading(true);
         try {
             if (isLogin) {
-                const data = await fetchAPI('/auth/login', {
-                    method: 'POST', body: JSON.stringify({ email, password })
-                });
-                onLogin({ username: data.username, token: data.token, role: data.role });
+                const d = await fetchAPI('/auth/login', { method:'POST', body:JSON.stringify({ email, password }) });
+                onLogin({ username:d.username, token:d.token, role:d.role });
             } else {
-                await fetchAPI('/auth/register', {
-                    method: 'POST', body: JSON.stringify({ username, email, password })
-                });
-                setSuccess('Registrazione completata! Ora puoi accedere con la tua email.');
+                await fetchAPI('/auth/register', { method:'POST', body:JSON.stringify({ username, email, password }) });
+                setSuccess('Registrazione completata! Ora puoi accedere.');
                 setIsLogin(true); setUsername(''); setPassword('');
             }
-        } catch (err) {
-            setError(err.message || 'Errore di connessione. Verifica che il backend sia attivo.');
-        } finally { setLoading(false); }
+        } catch(err) { setError(err.message || 'Errore di connessione.'); }
+        finally { setLoading(false); }
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-100 to-indigo-100 p-4">
-            <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md fade-in">
-                <div className="flex justify-center mb-5 text-indigo-600">
-                    <i className="ph ph-calendar-check text-6xl"></i>
+        <div className="min-h-screen flex items-center justify-center p-4">
+            <div className="glass-xl rounded-3xl p-10 w-full max-w-md fu" style={{borderRadius:'28px'}}>
+                {/* Logo */}
+                <div className="flex flex-col items-center mb-8">
+                    <div className="glass rounded-2xl p-4 mb-4" style={{boxShadow:'0 8px 32px rgba(10,132,255,0.22), inset 0 1px 0 rgba(255,255,255,0.80)'}}>
+                        <i className="ph ph-calendar-check" style={{fontSize:'36px', color:'var(--blue)'}}></i>
+                    </div>
+                    <h1 className="text-2xl font-semibold tp" style={{letterSpacing:'-.03em'}}>
+                        {isLogin ? 'Bentornato' : 'Crea Account'}
+                    </h1>
+                    <p className="ts text-sm mt-1">{isLogin ? 'Accedi ai tuoi calendari' : 'Inizia a organizzare la tua agenda'}</p>
                 </div>
-                <h2 className="text-2xl font-bold text-center text-gray-800 mb-7">
-                    {isLogin ? 'Accedi ai tuoi Calendari' : 'Crea un Account'}
-                </h2>
-                <form onSubmit={handleSubmit} className="space-y-4">
+
+                <form onSubmit={handleSubmit} style={{display:'flex',flexDirection:'column',gap:'12px'}}>
                     {!isLogin && (
                         <div>
-                            <label className="block text-sm font-medium text-gray-700">Username</label>
-                            <input type="text" required value={username}
-                                onChange={e => setUsername(e.target.value)}
-                                className="mt-1 w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
-                                placeholder="mario_rossi" />
+                            <label className="slabel block mb-1.5">Username</label>
+                            <input type="text" required value={username} onChange={e=>setUsername(e.target.value)}
+                                className="g-input" placeholder="mario_rossi" />
                         </div>
                     )}
                     <div>
-                        <label className="block text-sm font-medium text-gray-700">Email</label>
-                        <input type="email" required value={email}
-                            onChange={e => setEmail(e.target.value)}
-                            className="mt-1 w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
-                            placeholder="mario@esempio.it" />
+                        <label className="slabel block mb-1.5">Email</label>
+                        <input type="email" required value={email} onChange={e=>setEmail(e.target.value)}
+                            className="g-input" placeholder="mario@esempio.it" />
                     </div>
                     <div>
-                        <label className="block text-sm font-medium text-gray-700">Password</label>
-                        <input type="password" required value={password}
-                            onChange={e => setPassword(e.target.value)}
-                            className="mt-1 w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
-                            placeholder={isLogin ? '••••••••' : 'Almeno 6 caratteri'} />
+                        <label className="slabel block mb-1.5">Password</label>
+                        <input type="password" required value={password} onChange={e=>setPassword(e.target.value)}
+                            className="g-input" placeholder="••••••••" />
                     </div>
                     <ErrorBox message={error} />
                     <SuccessBox message={success} />
-                    <button type="submit" disabled={loading}
-                        className="w-full bg-indigo-600 text-white py-2.5 rounded-lg hover:bg-indigo-700 font-semibold disabled:opacity-60 transition">
-                        {loading ? 'Caricamento...' : (isLogin ? 'Accedi' : 'Registrati')}
+                    <button type="submit" disabled={loading} className="btn-p w-full mt-1" style={{padding:'12px'}}>
+                        {loading ? 'Caricamento…' : (isLogin ? 'Accedi' : 'Registrati')}
                     </button>
                 </form>
-                <p className="mt-5 text-center text-sm text-gray-600">
+
+                <p className="text-center text-sm ts mt-6">
                     {isLogin ? 'Non hai un account? ' : 'Hai già un account? '}
-                    <button onClick={switchMode} className="text-indigo-600 font-semibold hover:underline">
+                    <button onClick={switchMode} className="ta font-semibold" style={{background:'none',border:'none',cursor:'pointer',fontFamily:'var(--font)',fontSize:'14px'}}>
                         {isLogin ? 'Registrati' : 'Accedi'}
                     </button>
                 </p>
@@ -160,57 +529,50 @@ function Login({ onLogin }) {
     );
 }
 
-// ── Change Password Modal ────────────────────────────────────
+// ── Change Password Modal ─────────────────────────────────────
 function ChangePasswordModal({ token, onClose }) {
-    const [oldPwd, setOldPwd] = useState('');
-    const [newPwd, setNewPwd] = useState('');
-    const [confirm, setConfirm] = useState('');
-    const [loading, setLoading] = useState(false);
-    const [error, setError]   = useState('');
-    const [success, setSuccess] = useState('');
+    const [oldPwd,   setOldPwd]   = useState('');
+    const [newPwd,   setNewPwd]   = useState('');
+    const [confirm,  setConfirm]  = useState('');
+    const [loading,  setLoading]  = useState(false);
+    const [error,    setError]    = useState('');
+    const [success,  setSuccess]  = useState('');
 
     const handleSubmit = async (e) => {
         e.preventDefault(); setError(''); setSuccess('');
         if (newPwd !== confirm) { setError('Le password non coincidono.'); return; }
         setLoading(true);
         try {
-            const d = await fetchAPI('/auth/change-password', {
-                method: 'PUT',
-                body: JSON.stringify({ oldPassword: oldPwd, newPassword: newPwd }),
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            setSuccess(d.message);
-            setOldPwd(''); setNewPwd(''); setConfirm('');
-        } catch (err) { setError(err.message); }
+            const d = await fetchAPI('/auth/change-password', { method:'PUT', body:JSON.stringify({ oldPassword:oldPwd, newPassword:newPwd }), headers:{ 'Authorization':`Bearer ${token}` } });
+            setSuccess(d.message); setOldPwd(''); setNewPwd(''); setConfirm('');
+        } catch(err) { setError(err.message); }
         finally { setLoading(false); }
     };
 
     return (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 fade-in">
-            <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-md">
-                <div className="flex justify-between items-center mb-5">
-                    <h3 className="text-xl font-bold flex items-center space-x-2">
-                        <i className="ph ph-lock-key text-indigo-600 text-2xl"></i>
-                        <span>Cambia Password</span>
-                    </h3>
-                    <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><i className="ph ph-x text-xl"></i></button>
+        <div className="modal-bg fi">
+            <div className="glass-xl rounded-3xl p-7 w-full max-w-md fu" style={{borderRadius:'24px'}}>
+                <div className="flex justify-between items-center mb-6">
+                    <div className="flex items-center gap-3">
+                        <div className="glass rounded-xl p-2.5"><i className="ph ph-lock-key" style={{fontSize:'20px',color:'var(--violet)'}}></i></div>
+                        <span className="font-semibold tp" style={{fontSize:'16px'}}>Cambia Password</span>
+                    </div>
+                    <button onClick={onClose} className="glass rounded-xl p-2 ts hover:tp" style={{border:'none',cursor:'pointer',backdropFilter:'blur(8px)',WebkitBackdropFilter:'blur(8px)',background:'rgba(255,255,255,0.22)',transition:'all .18s'}}>
+                        <i className="ph ph-x" style={{fontSize:'16px'}}></i>
+                    </button>
                 </div>
-                <form onSubmit={handleSubmit} className="space-y-4">
-                    {[['Password Attuale', oldPwd, setOldPwd], ['Nuova Password', newPwd, setNewPwd], ['Conferma Nuova Password', confirm, setConfirm]].map(([label, val, setter]) => (
+                <form onSubmit={handleSubmit} style={{display:'flex',flexDirection:'column',gap:'12px'}}>
+                    {[['Password Attuale',oldPwd,setOldPwd],['Nuova Password',newPwd,setNewPwd],['Conferma Password',confirm,setConfirm]].map(([label,val,setter])=>(
                         <div key={label}>
-                            <label className="block text-sm font-medium text-gray-700">{label}</label>
-                            <input type="password" required value={val} onChange={e => setter(e.target.value)}
-                                className="mt-1 w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="••••••••" />
+                            <label className="slabel block mb-1.5">{label}</label>
+                            <input type="password" required value={val} onChange={e=>setter(e.target.value)} className="g-input" placeholder="••••••••" />
                         </div>
                     ))}
                     <ErrorBox message={error} />
                     <SuccessBox message={success} />
-                    <div className="flex justify-end space-x-3 pt-1">
-                        <button type="button" onClick={onClose} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition">Chiudi</button>
-                        <button type="submit" disabled={loading}
-                            className="px-5 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-semibold disabled:opacity-60 transition">
-                            {loading ? 'Salvataggio...' : 'Aggiorna'}
-                        </button>
+                    <div className="flex justify-end gap-3 pt-1">
+                        <button type="button" onClick={onClose} className="btn-g">Chiudi</button>
+                        <button type="submit" disabled={loading} className="btn-p">{loading ? 'Salvataggio…' : 'Aggiorna'}</button>
                     </div>
                 </form>
             </div>
@@ -218,102 +580,255 @@ function ChangePasswordModal({ token, onClose }) {
     );
 }
 
-// ── Event Modal (crea e modifica) ───────────────────────────
-// editEvent: null = nuovo evento, oppure oggetto evento da modificare
+// ── Liquid Glass Time Picker ──────────────────────────────────
+function TimePickerField({ label, value, onChange, invalid, onFocus }) {
+    const { useState: useLocalState, useEffect: useLocalEffect, useRef } = React;
+    const [open,        setOpen]   = useLocalState(false);
+    const [selHour,     setSelHour]= useLocalState(value ? value.substring(0,2) : null);
+    const [selMin,      setSelMin] = useLocalState(value ? value.substring(3,5) : null);
+    const ref  = useRef(null);
+    const hrRef= useRef(null);
+    const mnRef= useRef(null);
+
+    const HOURS   = Array.from({length:24}, (_,i) => String(i).padStart(2,'0'));
+    const MINUTES = ['00','05','10','15','20','25','30','35','40','45','50','55'];
+
+    // Scroll selected item into view when opening
+    useLocalEffect(() => {
+        if (!open) return;
+        if (selHour && hrRef.current) {
+            const el = hrRef.current.querySelector(`[data-h="${selHour}"]`);
+            if (el) el.scrollIntoView({ block:'center', behavior:'smooth' });
+        }
+        if (selMin && mnRef.current) {
+            const el = mnRef.current.querySelector(`[data-m="${selMin}"]`);
+            if (el) el.scrollIntoView({ block:'center', behavior:'smooth' });
+        }
+    }, [open]);
+
+    // Close on outside click
+    useLocalEffect(() => {
+        if (!open) return;
+        const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+        document.addEventListener('mousedown', handler);
+        return () => document.removeEventListener('mousedown', handler);
+    }, [open]);
+
+    // Sync internal state when external value changes
+    useLocalEffect(() => {
+        if (value) { setSelHour(value.substring(0,2)); setSelMin(value.substring(3,5)); }
+        else { setSelHour(null); setSelMin(null); }
+    }, [value]);
+
+    const confirm = () => {
+        if (selHour !== null && selMin !== null) {
+            onChange(`${selHour}:${selMin}`);
+        }
+        setOpen(false);
+    };
+
+    const pickHour = (h) => {
+        setSelHour(h);
+        // auto-confirm if minute already set
+        if (selMin !== null) { onChange(`${h}:${selMin}`); }
+    };
+    const pickMin = (m) => {
+        setSelMin(m);
+        if (selHour !== null) { onChange(`${selHour}:${m}`); }
+    };
+
+    const displayValue = value || null;
+
+    return (
+        <div className="tp-field" ref={ref}>
+            <label className="slabel block mb-1.5">{label} *</label>
+            <div
+                className={`tp-trigger${open?' open':''}${invalid&&!value?' invalid':''}`}
+                onClick={() => { setOpen(o => !o); if (onFocus) onFocus(); }}
+            >
+                <span style={displayValue ? {} : {color:'rgba(60,60,120,0.38)'}}>
+                    {displayValue || '––:––'}
+                </span>
+                <i className="ph ph-clock tp-clock-icon"></i>
+            </div>
+
+            {/* Validation hint */}
+            {invalid && !value && (
+                <div className="tp-hint">
+                    <i className="ph ph-warning-circle" style={{fontSize:'12px'}}></i>
+                    Ora inizio e fine obbligatorie
+                </div>
+            )}
+
+            {/* Dropdown */}
+            {open && (
+                <div className="tp-dropdown">
+                    <div className="tp-columns">
+                        {/* Hours */}
+                        <div style={{flex:1,display:'flex',flexDirection:'column'}}>
+                            <div className="tp-col-label">Ore</div>
+                            <div className="tp-col" ref={hrRef}>
+                                {HOURS.map(h => (
+                                    <div key={h} data-h={h}
+                                        className={`tp-option${selHour===h?' selected':''}`}
+                                        onClick={() => pickHour(h)}>
+                                        {h}
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div className="tp-col-divider"></div>
+
+                        {/* Minutes */}
+                        <div style={{flex:1,display:'flex',flexDirection:'column'}}>
+                            <div className="tp-col-label">Min</div>
+                            <div className="tp-col" ref={mnRef}>
+                                {MINUTES.map(m => (
+                                    <div key={m} data-m={m}
+                                        className={`tp-option${selMin===m?' selected':''}`}
+                                        onClick={() => pickMin(m)}>
+                                        {m}
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="tp-confirm">
+                        <button className="tp-confirm-btn" onClick={confirm}
+                            disabled={selHour===null||selMin===null}
+                            style={{opacity:selHour===null||selMin===null?.45:1}}>
+                            Conferma
+                        </button>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+}
+
+// ── Event Modal ───────────────────────────────────────────────
 function EventModal({ token, activeCalId, activeCalIsGlobal, userRole, selectedDate, editEvent, onClose, onSaved }) {
     const isEdit = !!editEvent;
-    const [loading, setLoading] = useState(false);
-    const [error, setError]     = useState('');
+    const [loading,     setLoading]  = useState(false);
+    const [error,       setError]    = useState('');
+    const [timeError,   setTimeError]= useState(false);
+    const [title,       setTitle]    = useState(editEvent?.title || '');
+    const [date,        setDate]     = useState(editEvent?.event_date?.substring(0,10) || selectedDate);
+    const [time,        setTime]     = useState(editEvent?.event_time?.substring(0,5) || '');
+    const [endTime,     setEndTime]  = useState(editEvent?.event_end_time?.substring(0,5) || '');
+    const [description, setDesc]     = useState(editEvent?.description || '');
 
-    // Valori iniziali (modifica) o vuoti (nuovo)
-    const [title, setTitle]         = useState(editEvent?.title || '');
-    const [date, setDate]           = useState(editEvent?.event_date?.substring(0,10) || selectedDate);
-    const [time, setTime]           = useState(editEvent?.event_time?.substring(0,5) || '');
-    const [endTime, setEndTime]     = useState(editEvent?.event_end_time?.substring(0,5) || '');
-    const [description, setDesc]    = useState(editEvent?.description || '');
-
-    // Utenti normali non possono creare/modificare eventi Ufficio
-    if (activeCalIsGlobal && !['capo', 'admin'].includes(userRole)) {
+    if (activeCalIsGlobal && !['capo','admin'].includes(userRole)) {
         return (
-            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 fade-in">
-                <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-md text-center">
-                    <i className="ph ph-lock text-5xl text-amber-400 mb-4"></i>
-                    <h3 className="text-xl font-bold text-gray-800 mb-2">Accesso limitato</h3>
-                    <p className="text-gray-500 mb-5">Solo i <strong>Capo</strong> e gli <strong>Admin</strong> possono modificare eventi Ufficio.</p>
-                    <button onClick={onClose} className="px-5 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 font-medium transition">Chiudi</button>
+            <div className="modal-bg fi">
+                <div className="glass-xl rounded-3xl p-8 w-full max-w-sm text-center fu" style={{borderRadius:'24px'}}>
+                    <i className="ph ph-lock" style={{fontSize:'48px',color:'var(--amber)',display:'block',marginBottom:'16px'}}></i>
+                    <h3 className="font-semibold tp mb-2" style={{fontSize:'17px'}}>Accesso limitato</h3>
+                    <p className="ts text-sm mb-6">Solo i <strong>Capo</strong> e gli <strong>Admin</strong> possono modificare eventi Ufficio.</p>
+                    <button onClick={onClose} className="btn-g">Chiudi</button>
                 </div>
             </div>
         );
     }
 
     const handleSubmit = async (e) => {
-        e.preventDefault(); setError(''); setLoading(true);
+        e.preventDefault();
+        setError('');
+        // Time validation
+        if (!time || !endTime) { setTimeError(true); return; }
+        setTimeError(false);
+        setLoading(true);
         try {
             if (isEdit) {
-                await fetchAPI(`/events/${editEvent.id}`, {
-                    method: 'PUT',
-                    body: JSON.stringify({ title, event_date: date, event_time: time || null, event_end_time: endTime || null, description }),
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
+                await fetchAPI(`/events/${editEvent.id}`, { method:'PUT', body:JSON.stringify({ title, event_date:date, event_time:time, event_end_time:endTime, description }), headers:{ 'Authorization':`Bearer ${token}` } });
             } else {
-                await fetchAPI('/events', {
-                    method: 'POST',
-                    body: JSON.stringify({ calendar_id: activeCalId, title, event_date: date, event_time: time || null, event_end_time: endTime || null, description }),
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
+                await fetchAPI('/events', { method:'POST', body:JSON.stringify({ calendar_id:activeCalId, title, event_date:date, event_time:time, event_end_time:endTime, description }), headers:{ 'Authorization':`Bearer ${token}` } });
             }
             onSaved(); onClose();
-        } catch (err) { setError(err.message); }
+        } catch(err) { setError(err.message); }
         finally { setLoading(false); }
     };
 
-    const isOffice = isEdit ? editEvent.source === 'office' : activeCalIsGlobal;
+    const isOffice    = isEdit ? editEvent.source === 'office' : activeCalIsGlobal;
+    const accentColor = isOffice ? 'var(--amber)' : 'var(--blue)';
 
     return (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 fade-in">
-            <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-md">
-                <div className="flex justify-between items-center mb-5">
-                    <h3 className="text-xl font-bold text-gray-800">
-                        {isEdit
-                            ? (isOffice ? '✏️ Modifica Evento Ufficio' : '✏️ Modifica Evento Personale')
-                            : (isOffice ? '📋 Nuovo Evento Ufficio'   : '👤 Nuovo Evento Personale')}
-                    </h3>
-                    <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><i className="ph ph-x text-xl"></i></button>
+        <div className="modal-bg fi">
+            <div className="glass-xl fu" style={{borderRadius:'24px',padding:'28px',width:'100%',maxWidth:'440px'}}>
+                {/* Header */}
+                <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'24px'}}>
+                    <div style={{display:'flex',alignItems:'center',gap:'12px'}}>
+                        <div className="glass" style={{padding:'9px',borderRadius:'13px',boxShadow:`0 4px 16px ${isOffice?'rgba(255,159,10,0.22)':'rgba(10,132,255,0.22)'},inset 0 1px 0 rgba(255,255,255,0.80)`}}>
+                            <i className={`ph ${isEdit?'ph-pencil':'ph-plus'}`} style={{fontSize:'19px',color:accentColor}}></i>
+                        </div>
+                        <span style={{fontSize:'16px',fontWeight:600,color:'rgba(15,15,40,.85)',letterSpacing:'-.02em'}}>
+                            {isEdit ? (isOffice?'Modifica Evento Ufficio':'Modifica Evento Personale') : (isOffice?'Nuovo Evento Ufficio':'Nuovo Evento Personale')}
+                        </span>
+                    </div>
+                    <button onClick={onClose} style={{padding:'7px',background:'rgba(255,255,255,0.30)',backdropFilter:'blur(8px)',WebkitBackdropFilter:'blur(8px)',border:'1px solid rgba(255,255,255,0.55)',borderRadius:'11px',cursor:'pointer',transition:'all .18s',color:'rgba(60,60,120,.55)',display:'flex',alignItems:'center',justifyContent:'center'}}
+                        onMouseEnter={e=>e.currentTarget.style.background='rgba(255,255,255,0.48)'}
+                        onMouseLeave={e=>e.currentTarget.style.background='rgba(255,255,255,0.30)'}>
+                        <i className="ph ph-x" style={{fontSize:'15px'}}></i>
+                    </button>
                 </div>
-                <form onSubmit={handleSubmit} className="space-y-4">
+
+                <form onSubmit={handleSubmit} style={{display:'flex',flexDirection:'column',gap:'14px'}}>
+                    {/* Title */}
                     <div>
-                        <label className="block text-sm font-medium text-gray-700">Titolo *</label>
-                        <input required value={title} onChange={e => setTitle(e.target.value)}
-                            className="w-full mt-1 p-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="Titolo evento" />
+                        <label className="slabel block mb-1.5">Titolo *</label>
+                        <input required value={title} onChange={e=>setTitle(e.target.value)} className="g-input" placeholder="Titolo evento" />
                     </div>
+
+                    {/* Date */}
                     <div>
-                        <label className="block text-sm font-medium text-gray-700">Data *</label>
-                        <input type="date" required value={date} onChange={e => setDate(e.target.value)}
-                            className="w-full mt-1 p-2 border rounded-lg outline-none" />
+                        <label className="slabel block mb-1.5">Data *</label>
+                        <input type="date" required value={date} onChange={e=>setDate(e.target.value)} className="g-input" />
                     </div>
-                    <div className="flex space-x-3">
-                        <div className="flex-1">
-                            <label className="block text-sm font-medium text-gray-700">Ora inizio</label>
-                            <input type="time" value={time} onChange={e => setTime(e.target.value)}
-                                className="w-full mt-1 p-2 border rounded-lg outline-none" />
+
+                    {/* Time pickers */}
+                    <div style={{display:'flex',gap:'12px',alignItems:'flex-start'}}>
+                        <div style={{flex:1,position:'relative',zIndex:timeError&&!time?110:100}}>
+                            <TimePickerField
+                                label="Ora inizio"
+                                value={time}
+                                onChange={v=>{setTime(v);setTimeError(false);}}
+                                invalid={timeError}
+                            />
                         </div>
-                        <div className="flex-1">
-                            <label className="block text-sm font-medium text-gray-700">Ora fine</label>
-                            <input type="time" value={endTime} onChange={e => setEndTime(e.target.value)}
-                                className="w-full mt-1 p-2 border rounded-lg outline-none" />
+                        <div style={{flex:1,position:'relative',zIndex:timeError&&!endTime?110:99}}>
+                            <TimePickerField
+                                label="Ora fine"
+                                value={endTime}
+                                onChange={v=>{setEndTime(v);setTimeError(false);}}
+                                invalid={timeError}
+                            />
                         </div>
                     </div>
+
+                    {/* Global time validation message */}
+                    {timeError && (!time || !endTime) && (
+                        <div style={{display:'flex',alignItems:'center',gap:'6px',background:'rgba(255,69,58,0.09)',border:'1px solid rgba(255,69,58,0.22)',borderRadius:'10px',padding:'8px 12px',fontSize:'12.5px',color:'rgba(190,30,20,.80)',marginTop:'-6px'}}>
+                            <i className="ph ph-warning" style={{fontSize:'14px',flexShrink:0}}></i>
+                            Ora di inizio e fine sono obbligatorie per salvare l'evento.
+                        </div>
+                    )}
+
+                    {/* Description */}
                     <div>
-                        <label className="block text-sm font-medium text-gray-700">Descrizione</label>
-                        <textarea rows="3" value={description} onChange={e => setDesc(e.target.value)}
-                            className="w-full mt-1 p-2 border rounded-lg outline-none resize-none" placeholder="Note aggiuntive..."></textarea>
+                        <label className="slabel block mb-1.5">Descrizione</label>
+                        <textarea rows="3" value={description} onChange={e=>setDesc(e.target.value)}
+                            className="g-input" placeholder="Note aggiuntive…" style={{resize:'none'}}></textarea>
                     </div>
+
                     <ErrorBox message={error} />
-                    <div className="flex justify-end space-x-3 pt-1">
-                        <button type="button" onClick={onClose} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition">Annulla</button>
-                        <button type="submit" disabled={loading}
-                            className="px-5 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-semibold disabled:opacity-60 transition">
-                            {loading ? 'Salvataggio...' : (isEdit ? 'Salva Modifiche' : 'Crea Evento')}
+
+                    {/* Actions */}
+                    <div style={{display:'flex',justifyContent:'flex-end',gap:'10px',paddingTop:'4px'}}>
+                        <button type="button" onClick={onClose} className="btn-g">Annulla</button>
+                        <button type="submit" disabled={loading} className="btn-p">
+                            {loading ? 'Salvataggio…' : (isEdit?'Salva Modifiche':'Crea Evento')}
                         </button>
                     </div>
                 </form>
@@ -322,85 +837,76 @@ function EventModal({ token, activeCalId, activeCalIsGlobal, userRole, selectedD
     );
 }
 
-// ── Admin Panel ──────────────────────────────────────────────
+// ── Admin Panel ───────────────────────────────────────────────
 function AdminPanel({ token, onClose }) {
-    const [users, setUsers] = useState([]);
+    const [users,   setUsers]   = useState([]);
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState('');
+    const [error,   setError]   = useState('');
     const [success, setSuccess] = useState('');
-    const [changing, setChanging] = useState(null);
+    const [changing,setChanging]= useState(null);
 
     const loadUsers = async () => {
         setLoading(true); setError('');
-        try {
-            const data = await fetchAPI('/admin/users', { headers: { 'Authorization': `Bearer ${token}` } });
-            setUsers(data);
-        } catch (err) { setError(err.message); }
+        try { const d = await fetchAPI('/admin/users', { headers:{ 'Authorization':`Bearer ${token}` } }); setUsers(d); }
+        catch(err) { setError(err.message); }
         finally { setLoading(false); }
     };
-
     useEffect(() => { loadUsers(); }, []);
 
     const changeRole = async (userId, newRole) => {
         setChanging(userId); setError(''); setSuccess('');
         try {
-            const d = await fetchAPI(`/admin/users/${userId}/role`, {
-                method: 'PUT',
-                body: JSON.stringify({ role: newRole }),
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
+            const d = await fetchAPI(`/admin/users/${userId}/role`, { method:'PUT', body:JSON.stringify({ role:newRole }), headers:{ 'Authorization':`Bearer ${token}` } });
             setSuccess(d.message);
-            setUsers(prev => prev.map(u => u.id === userId ? { ...u, role: newRole } : u));
-        } catch (err) { setError(err.message); }
+            setUsers(prev => prev.map(u => u.id === userId ? { ...u, role:newRole } : u));
+        } catch(err) { setError(err.message); }
         finally { setChanging(null); }
     };
 
     return (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 fade-in p-4">
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[85vh] flex flex-col">
-                <div className="flex justify-between items-center p-6 border-b">
-                    <h2 className="text-xl font-bold text-gray-800 flex items-center space-x-2">
-                        <i className="ph ph-shield-star text-purple-600 text-2xl"></i>
-                        <span>Pannello Admin — Gestione Utenti</span>
-                    </h2>
-                    <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><i className="ph ph-x text-xl"></i></button>
+        <div className="modal-bg fi">
+            <div className="glass-xl fu" style={{borderRadius:'24px',width:'100%',maxWidth:'700px',maxHeight:'85vh',display:'flex',flexDirection:'column'}}>
+                <div className="flex justify-between items-center p-6" style={{borderBottom:'1px solid rgba(255,255,255,0.30)'}}>
+                    <div className="flex items-center gap-3">
+                        <div className="glass rounded-xl p-2.5"><i className="ph ph-shield-star" style={{fontSize:'20px',color:'var(--violet)'}}></i></div>
+                        <span className="font-semibold tp" style={{fontSize:'16px'}}>Pannello Admin — Gestione Utenti</span>
+                    </div>
+                    <button onClick={onClose} className="glass rounded-xl p-2" style={{border:'none',cursor:'pointer',backdropFilter:'blur(8px)',WebkitBackdropFilter:'blur(8px)',background:'rgba(255,255,255,0.22)',transition:'all .18s'}}>
+                        <i className="ph ph-x ts" style={{fontSize:'16px'}}></i>
+                    </button>
                 </div>
-                <div className="p-6 overflow-y-auto flex-1">
+                <div style={{padding:'24px',overflowY:'auto',flex:1}}>
                     <ErrorBox message={error} />
                     <SuccessBox message={success} />
                     {loading ? (
-                        <div className="text-center py-10 text-gray-400">Caricamento utenti...</div>
+                        <div className="text-center py-10 tm">Caricamento utenti…</div>
                     ) : (
-                        <table className="w-full text-sm mt-4">
+                        <table className="atable w-full" style={{borderCollapse:'collapse'}}>
                             <thead>
-                                <tr className="text-left border-b text-gray-500 text-xs uppercase tracking-wide">
-                                    <th className="pb-3 pr-4">Username</th>
-                                    <th className="pb-3 pr-4">Email</th>
-                                    <th className="pb-3 pr-4">Ruolo attuale</th>
-                                    <th className="pb-3">Cambia ruolo</th>
+                                <tr>
+                                    <th className="text-left pr-4">Username</th>
+                                    <th className="text-left pr-4">Email</th>
+                                    <th className="text-left pr-4">Ruolo</th>
+                                    <th className="text-left">Cambia ruolo</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {users.map(u => (
-                                    <tr key={u.id} className="border-b last:border-0 hover:bg-gray-50">
-                                        <td className="py-3 pr-4 font-medium text-gray-800">{u.username}</td>
-                                        <td className="py-3 pr-4 text-gray-500">{u.email}</td>
-                                        <td className="py-3 pr-4"><RoleBadge role={u.role} /></td>
-                                        <td className="py-3">
+                                {users.map(u=>(
+                                    <tr key={u.id}>
+                                        <td className="font-medium pr-4">{u.username}</td>
+                                        <td className="ts pr-4">{u.email}</td>
+                                        <td className="pr-4"><RoleBadge role={u.role}/></td>
+                                        <td>
                                             {u.role === 'admin' ? (
-                                                <span className="text-xs text-gray-400 italic">Non modificabile</span>
+                                                <span className="tm text-xs italic">Non modificabile</span>
                                             ) : (
-                                                <div className="flex space-x-2">
-                                                    <button
-                                                        disabled={u.role === 'user' || changing === u.id}
-                                                        onClick={() => changeRole(u.id, 'user')}
-                                                        className="px-3 py-1 text-xs bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 disabled:opacity-40 disabled:cursor-not-allowed transition">
+                                                <div style={{display:'flex',gap:'8px'}}>
+                                                    <button disabled={u.role==='user'||changing===u.id} onClick={()=>changeRole(u.id,'user')}
+                                                        className="glass" style={{padding:'4px 12px',borderRadius:'8px',fontSize:'12px',cursor:'pointer',fontFamily:'var(--font)',color:'rgba(30,30,80,.75)',border:'1px solid rgba(255,255,255,0.45)',transition:'all .18s',opacity:u.role==='user'||changing===u.id?.5:1}}>
                                                         → Utente
                                                     </button>
-                                                    <button
-                                                        disabled={u.role === 'capo' || changing === u.id}
-                                                        onClick={() => changeRole(u.id, 'capo')}
-                                                        className="px-3 py-1 text-xs bg-amber-100 text-amber-700 rounded-lg hover:bg-amber-200 disabled:opacity-40 disabled:cursor-not-allowed transition">
+                                                    <button disabled={u.role==='capo'||changing===u.id} onClick={()=>changeRole(u.id,'capo')}
+                                                        style={{padding:'4px 12px',borderRadius:'8px',fontSize:'12px',cursor:'pointer',fontFamily:'var(--font)',background:'rgba(255,159,10,0.15)',border:'1px solid rgba(255,159,10,0.30)',color:'rgba(140,70,0,.90)',transition:'all .18s',opacity:u.role==='capo'||changing===u.id?.5:1}}>
                                                         → Capo
                                                     </button>
                                                 </div>
@@ -417,699 +923,493 @@ function AdminPanel({ token, onClose }) {
     );
 }
 
-
-// ── Upcoming Events Panel ────────────────────────────────────
+// ── Upcoming Panel ────────────────────────────────────────────
 function UpcomingPanel({ events, userRole, onEditEvent, onDeleteEvent }) {
+    const toDateStr = (raw) => { if (!raw) return null; return (raw instanceof Date) ? raw.toLocaleDateString('sv') : String(raw).substring(0,10); };
+    const localToday = () => { const n=new Date(); return `${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}-${String(n.getDate()).padStart(2,'0')}`; };
+    const addDays = (dateStr,n) => { const d=new Date(dateStr+'T12:00:00'); d.setDate(d.getDate()+n); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; };
 
-    // ── Timezone-safe date helpers ───────────────────────────────
-    // MySQL returns event_date as "2026-03-05T00:00:00.000Z" or "2026-03-05".
-    // We always normalise to a plain local "YYYY-MM-DD" string.
-    const toDateStr = (raw) => {
-        if (!raw) return null;
-        const s = (raw instanceof Date)
-            ? raw.toLocaleDateString('sv')        // "sv" locale = "YYYY-MM-DD" in local time
-            : String(raw).substring(0, 10);       // already a string, grab first 10 chars
-        return s;
-    };
+    const todayStr    = localToday();
+    const tomorrowStr = addDays(todayStr,1);
+    const endStr      = addDays(todayStr,7);
 
-    // Get today's local YYYY-MM-DD without any UTC drift
-    const localToday = () => {
-        const n = new Date();
-        return `${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}-${String(n.getDate()).padStart(2,'0')}`;
-    };
+    const upcoming = events.filter(ev => { const ds=toDateStr(ev.event_date); return ds && ds>=todayStr && ds<endStr; })
+        .sort((a,b) => { const da=toDateStr(a.event_date)||'',db=toDateStr(b.event_date)||''; if(da!==db) return da<db?-1:1; const at=(a.start_time||a.event_time||'').substring(0,5),bt=(b.start_time||b.event_time||'').substring(0,5); return at<bt?-1:1; });
 
-    // Add N days to a YYYY-MM-DD string, returns YYYY-MM-DD
-    const addDays = (dateStr, n) => {
-        const d = new Date(dateStr + 'T12:00:00'); // noon avoids DST ambiguity
-        d.setDate(d.getDate() + n);
-        return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-    };
-
-    const todayStr    = localToday();              // "2026-03-05"
-    const tomorrowStr = addDays(todayStr, 1);      // "2026-03-06"
-    const endStr      = addDays(todayStr, 7);      // "2026-03-12" — exclusive upper bound
-
-    // ── Filter: today ≤ date < today+7 ──────────────────────────
-    // All string comparisons are safe since YYYY-MM-DD is lexicographically ordered.
-    // React re-runs this on every render → panel is always in sync with `events` prop.
-    const upcoming = events
-        .filter(ev => {
-            const ds = toDateStr(ev.event_date);
-            return ds && ds >= todayStr && ds < endStr;
-        })
-        .sort((a, b) => {
-            const da = toDateStr(a.event_date) || '';
-            const db = toDateStr(b.event_date) || '';
-            if (da !== db) return da < db ? -1 : 1;
-            const at = (a.start_time || a.event_time || '').substring(0, 5);
-            const bt = (b.start_time || b.event_time || '').substring(0, 5);
-            return at < bt ? -1 : 1;
-        });
-
-    // ── Group by YYYY-MM-DD ──────────────────────────────────────
     const grouped = {};
-    upcoming.forEach(ev => {
-        const key = toDateStr(ev.event_date);
-        if (!grouped[key]) grouped[key] = [];
-        grouped[key].push(ev);
-    });
+    upcoming.forEach(ev => { const k=toDateStr(ev.event_date); if(!grouped[k]) grouped[k]=[]; grouped[k].push(ev); });
     const sortedDates = Object.keys(grouped).sort();
 
-    // ── Day label: pure string comparison, no UTC conversion ─────
-    const formatDayLabel = (dateStr) => {
-        const d = new Date(dateStr + 'T12:00:00'); // noon = no DST edge case
-        const weekday   = d.toLocaleDateString('it-IT', { weekday: 'short' });
-        const dateLabel = d.toLocaleDateString('it-IT', { day: 'numeric', month: 'short' });
-        if (dateStr === todayStr)    return { main: 'Oggi',   sub: `${weekday}, ${dateLabel}`, isToday: true  };
-        if (dateStr === tomorrowStr) return { main: 'Domani', sub: `${weekday}, ${dateLabel}`, isToday: false };
-        return { main: weekday.charAt(0).toUpperCase() + weekday.slice(1), sub: dateLabel, isToday: false };
+    const formatDayLabel = (ds) => { const d=new Date(ds+'T12:00:00'); const wd=d.toLocaleDateString('it-IT',{weekday:'short'}); const dl=d.toLocaleDateString('it-IT',{day:'numeric',month:'short'}); if(ds===todayStr) return {main:'Oggi',sub:`${wd}, ${dl}`,isToday:true}; if(ds===tomorrowStr) return {main:'Domani',sub:`${wd}, ${dl}`,isToday:false}; return {main:wd.charAt(0).toUpperCase()+wd.slice(1),sub:dl,isToday:false}; };
+
+    const getOverlapIds = (dayEvs) => { const ids=new Set(); for(let i=0;i<dayEvs.length;i++) for(let j=i+1;j<dayEvs.length;j++) { const aS=(dayEvs[i].start_time||dayEvs[i].event_time||'').substring(0,5),aE=(dayEvs[i].end_time||dayEvs[i].event_end_time||'').substring(0,5),bS=(dayEvs[j].start_time||dayEvs[j].event_time||'').substring(0,5),bE=(dayEvs[j].end_time||dayEvs[j].event_end_time||'').substring(0,5); if(aS&&aE&&bS&&bE&&aS<bE&&aE>bS){ids.add(`${dayEvs[i].id}-${dayEvs[i].source}`);ids.add(`${dayEvs[j].id}-${dayEvs[j].source}`);} } return ids; };
+
+    const getColors = (ev, isOvlp) => {
+        if (isOvlp)                  return { bar:'#FF453A', time:'rgba(200,30,20,.85)', title:'rgba(160,20,10,.90)' };
+        if (ev.source==='office')    return { bar:'#FF9F0A', time:'rgba(160,80,0,.85)',  title:'rgba(15,15,40,.88)' };
+        return                              { bar:'#0A84FF', time:'rgba(10,80,200,.75)', title:'rgba(15,15,40,.88)' };
     };
 
-    // ── Overlap detection for a single day's events ──────────────
-    const getOverlapIdsForDay = (dayEvs) => {
-        const ids = new Set();
-        for (let i = 0; i < dayEvs.length; i++) {
-            for (let j = i + 1; j < dayEvs.length; j++) {
-                const aS = (dayEvs[i].start_time || dayEvs[i].event_time || '').substring(0, 5);
-                const aE = (dayEvs[i].end_time   || dayEvs[i].event_end_time || '').substring(0, 5);
-                const bS = (dayEvs[j].start_time || dayEvs[j].event_time || '').substring(0, 5);
-                const bE = (dayEvs[j].end_time   || dayEvs[j].event_end_time || '').substring(0, 5);
-                if (aS && aE && bS && bE && aS < bE && aE > bS) {
-                    ids.add(`${dayEvs[i].id}-${dayEvs[i].source}`);
-                    ids.add(`${dayEvs[j].id}-${dayEvs[j].source}`);
-                }
-            }
-        }
-        return ids;
-    };
-
-    // ── Color scheme ─────────────────────────────────────────────
-    const getEventColors = (ev, isOvlp) => {
-        if (isOvlp)              return { bar: 'bg-orange-400', bg: 'bg-orange-50 border-orange-200', time: 'text-orange-600', title: 'text-orange-900' };
-        if (ev.source === 'office') return { bar: 'bg-emerald-400', bg: 'bg-emerald-50 border-emerald-200', time: 'text-emerald-600', title: 'text-gray-800' };
-        return                        { bar: 'bg-blue-500',    bg: 'bg-blue-50 border-blue-200',     time: 'text-blue-600',    title: 'text-gray-800' };
-    };
-
-    // ── Render ───────────────────────────────────────────────────
     return (
-        <div className="w-full lg:w-80 flex-shrink-0 flex flex-col bg-white border-t lg:border-t-0 lg:border-l border-gray-200 overflow-hidden max-h-72 lg:max-h-none">
-            {/* Panel header */}
-            <div className="px-5 py-4 border-b border-gray-100 bg-gray-50">
-                <h3 className="text-sm font-bold text-gray-700 uppercase tracking-wider flex items-center space-x-2">
-                    <i className="ph ph-calendar-blank text-indigo-500 text-base"></i>
-                    <span>Prossimi 7 giorni</span>
-                </h3>
+        <div className="glass-lg" style={{width:'300px',flexShrink:0,display:'flex',flexDirection:'column',borderRadius:'20px 0 0 0',borderRight:'none',borderTop:'none',borderBottom:'none',maxHeight:'100%',borderRadius:'0'}}>
+            {/* Header */}
+            <div style={{padding:'18px 20px 14px',borderBottom:'1px solid rgba(255,255,255,0.28)'}}>
+                <div className="flex items-center gap-2">
+                    <i className="ph ph-calendar-blank" style={{color:'var(--blue)',fontSize:'15px'}}></i>
+                    <span className="slabel" style={{fontSize:'11px'}}>Prossimi 7 giorni</span>
+                </div>
             </div>
-
-            {/* Scrollable list */}
-            <div className="flex-1 overflow-y-auto px-4 py-3 space-y-5">
-                {sortedDates.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-12 text-gray-400">
-                        <i className="ph ph-calendar-x text-4xl mb-3"></i>
-                        <p className="text-sm text-center">Nessun evento nei prossimi 7 giorni</p>
+            {/* List */}
+            <div style={{flex:1,overflowY:'auto',padding:'12px 16px',display:'flex',flexDirection:'column',gap:'20px'}}>
+                {sortedDates.length===0 ? (
+                    <div style={{display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:'48px 0',color:'rgba(60,60,120,.38)'}}>
+                        <i className="ph ph-calendar-x" style={{fontSize:'36px',marginBottom:'10px'}}></i>
+                        <p style={{fontSize:'13px',textAlign:'center'}}>Nessun evento nei prossimi 7 giorni</p>
                     </div>
-                ) : (
-                    sortedDates.map(dateStr => {
-                        const { main, sub, isToday } = formatDayLabel(dateStr);
-                        const dayEvs    = grouped[dateStr];
-                        const overlapIds = getOverlapIdsForDay(dayEvs);
-
-                        return (
-                            <div key={dateStr}>
-                                {/* Day header */}
-                                <div className="flex items-baseline space-x-2 mb-2">
-                                    <span className={`text-sm font-bold ${isToday ? 'text-indigo-600' : 'text-gray-700'}`}>{main}</span>
-                                    <span className="text-xs text-gray-400 font-medium">{sub}</span>
-                                    {isToday && (
-                                        <span className="ml-auto text-xs bg-indigo-100 text-indigo-600 px-1.5 py-0.5 rounded-full font-semibold">oggi</span>
-                                    )}
-                                </div>
-
-                                {/* Event cards */}
-                                <div className="space-y-1.5">
-                                    {dayEvs.map(ev => {
-                                        const key     = `${ev.id}-${ev.source}`;
-                                        const isOvlp  = overlapIds.has(key);
-                                        const colors  = getEventColors(ev, isOvlp);
-                                        const startT  = (ev.start_time || ev.event_time || '').substring(0, 5);
-                                        const endT    = (ev.end_time   || ev.event_end_time || '').substring(0, 5);
-                                        const canEdit = ev.source === 'office' ? ['capo','admin'].includes(userRole) : true;
-
-                                        return (
-                                            <div key={key}
-                                                className={`flex items-stretch rounded-xl border ${colors.bg} overflow-hidden group`}>
-                                                {/* Left colour bar */}
-                                                <div className={`w-1 flex-shrink-0 ${colors.bar}`}></div>
-                                                {/* Time */}
-                                                <div className={`w-12 flex-shrink-0 flex items-center justify-center px-1 py-3 text-xs font-bold ${colors.time}`}>
-                                                    {startT || '—'}
-                                                </div>
-                                                {/* Content */}
-                                                <div className="flex-1 py-2.5 pr-2 min-w-0">
-                                                    <div className={`text-sm font-semibold truncate ${colors.title}`}>{ev.title}</div>
-                                                    <div className="flex items-center flex-wrap gap-1 mt-0.5">
-                                                        {startT && (
-                                                            <span className="text-xs text-gray-400">{startT}{endT ? ` – ${endT}` : ''}</span>
-                                                        )}
-                                                        {ev.source === 'office' && (
-                                                            <span className="text-xs bg-emerald-100 text-emerald-700 px-1 py-0.5 rounded font-medium">Ufficio</span>
-                                                        )}
-                                                        {isOvlp && <span className="text-xs text-orange-500">⚠</span>}
-                                                    </div>
-                                                </div>
-                                                {/* Hover actions */}
-                                                {canEdit && (
-                                                    <div className="flex flex-col justify-center pr-2 opacity-0 group-hover:opacity-100 transition-opacity space-y-1">
-                                                        <button onClick={() => onEditEvent(ev)}
-                                                            className="p-1 text-gray-300 hover:text-indigo-500 transition rounded" title="Modifica">
-                                                            <i className="ph ph-pencil text-sm"></i>
-                                                        </button>
-                                                        <button onClick={() => onDeleteEvent(ev)}
-                                                            className="p-1 text-gray-300 hover:text-red-400 transition rounded" title="Elimina">
-                                                            <i className="ph ph-trash text-sm"></i>
-                                                        </button>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-
-                                <div className="mt-4 border-b border-gray-100"></div>
+                ) : sortedDates.map(ds => {
+                    const { main, sub, isToday } = formatDayLabel(ds);
+                    const dayEvs = grouped[ds];
+                    const ovIds  = getOverlapIds(dayEvs);
+                    return (
+                        <div key={ds}>
+                            <div className="flex items-baseline gap-2 mb-2">
+                                <span style={{fontSize:'13px',fontWeight:600,color:isToday?'var(--blue)':'rgba(15,15,40,.80)'}}>{main}</span>
+                                <span style={{fontSize:'11px',color:'rgba(60,60,120,.45)'}}>{sub}</span>
+                                {isToday && <span style={{marginLeft:'auto',fontSize:'10px',fontWeight:700,background:'rgba(10,132,255,0.14)',border:'1px solid rgba(10,132,255,0.22)',color:'var(--blue)',padding:'1px 8px',borderRadius:'20px'}}>oggi</span>}
                             </div>
-                        );
-                    })
-                )}
+                            <div style={{display:'flex',flexDirection:'column',gap:'6px'}}>
+                                {dayEvs.map(ev => {
+                                    const key    = `${ev.id}-${ev.source}`;
+                                    const isOvlp = ovIds.has(key);
+                                    const colors = getColors(ev, isOvlp);
+                                    const startT = (ev.start_time||ev.event_time||'').substring(0,5);
+                                    const endT   = (ev.end_time||ev.event_end_time||'').substring(0,5);
+                                    const canEdit= ev.source==='office' ? ['capo','admin'].includes(userRole) : true;
+                                    return (
+                                        <div key={key} className="ev-card" style={{display:'flex',overflow:'hidden'}}>
+                                            {/* color bar */}
+                                            <div style={{width:'3px',background:colors.bar,flexShrink:0,borderRadius:'2px 0 0 2px'}}></div>
+                                            {/* time col */}
+                                            <div style={{width:'44px',flexShrink:0,padding:'10px 0 10px 8px',fontSize:'10px',fontWeight:600,color:colors.time,lineHeight:1.3}}>
+                                                {startT||'—'}
+                                            </div>
+                                            {/* content */}
+                                            <div style={{flex:1,padding:'10px 8px',minWidth:0}}>
+                                                <div style={{fontSize:'13px',fontWeight:600,color:colors.title,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{ev.title}</div>
+                                                <div style={{display:'flex',alignItems:'center',flexWrap:'wrap',gap:'4px',marginTop:'3px'}}>
+                                                    {startT && <span style={{fontSize:'10.5px',color:'rgba(60,60,120,.42)'}}>{startT}{endT?` – ${endT}`:''}</span>}
+                                                    {ev.source==='office' && <span style={{fontSize:'10px',fontWeight:600,background:'rgba(255,159,10,0.14)',border:'1px solid rgba(255,159,10,0.25)',color:'rgba(140,70,0,.85)',padding:'1px 6px',borderRadius:'5px'}}>Ufficio</span>}
+                                                    {isOvlp && <span style={{fontSize:'10px',color:'var(--red)'}}>⚠</span>}
+                                                </div>
+                                            </div>
+                                            {/* actions */}
+                                            {canEdit && (
+                                                <div className="group" style={{display:'flex',flexDirection:'column',justifyContent:'center',padding:'0 8px',gap:'4px',opacity:0,transition:'opacity .18s'}}
+                                                    onMouseEnter={e=>e.currentTarget.style.opacity=1}
+                                                    onMouseLeave={e=>e.currentTarget.style.opacity=0}>
+                                                    <button onClick={()=>onEditEvent(ev)} style={{padding:'4px',background:'none',border:'none',cursor:'pointer',color:'rgba(60,60,120,.45)',transition:'color .15s'}}
+                                                        onMouseEnter={e=>e.currentTarget.style.color='var(--blue)'}
+                                                        onMouseLeave={e=>e.currentTarget.style.color='rgba(60,60,120,.45)'}>
+                                                        <i className="ph ph-pencil" style={{fontSize:'13px'}}></i>
+                                                    </button>
+                                                    <button onClick={()=>onDeleteEvent(ev)} style={{padding:'4px',background:'none',border:'none',cursor:'pointer',color:'rgba(60,60,120,.45)',transition:'color .15s'}}
+                                                        onMouseEnter={e=>e.currentTarget.style.color='var(--red)'}
+                                                        onMouseLeave={e=>e.currentTarget.style.color='rgba(60,60,120,.45)'}>
+                                                        <i className="ph ph-trash" style={{fontSize:'13px'}}></i>
+                                                    </button>
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    );
+                })}
             </div>
-
-            {/* Footer legend */}
-            <div className="px-4 py-3 border-t border-gray-100 bg-gray-50 flex flex-wrap gap-3 text-xs text-gray-500">
-                <span className="flex items-center space-x-1.5">
-                    <span className="w-2.5 h-2.5 rounded-full bg-blue-500"></span><span>Personale</span>
-                </span>
-                <span className="flex items-center space-x-1.5">
-                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-400"></span><span>Ufficio</span>
-                </span>
-                <span className="flex items-center space-x-1.5">
-                    <span className="w-2.5 h-2.5 rounded-full bg-orange-400"></span><span>Sovrapposti</span>
-                </span>
+            {/* Legend footer */}
+            <div style={{padding:'12px 16px',borderTop:'1px solid rgba(255,255,255,0.25)',display:'flex',flexWrap:'wrap',gap:'12px'}}>
+                {[['#0A84FF','Personale'],['#FF9F0A','Ufficio'],['#FF453A','Sovrapposti']].map(([c,l])=>(
+                    <span key={l} style={{display:'flex',alignItems:'center',gap:'6px',fontSize:'11px',color:'rgba(60,60,120,.50)'}}>
+                        <span style={{width:'7px',height:'7px',borderRadius:'50%',background:c,display:'inline-block',flexShrink:0}}></span>{l}
+                    </span>
+                ))}
             </div>
         </div>
     );
 }
 
-
-// ── Dashboard ────────────────────────────────────────────────
+// ── Dashboard ─────────────────────────────────────────────────
 function Dashboard({ auth, onLogout }) {
     const { username, token, role } = auth;
-    const authHeaders = { 'Authorization': `Bearer ${token}` };
+    const authHeaders = { 'Authorization':`Bearer ${token}` };
 
-    const [calendars, setCalendars]           = useState([]);
-    const [activeCalId, setActiveCalId]       = useState(null);
-    const [events, setEvents]                 = useState([]);   // events for the active calendar grid
-    const [allEvents, setAllEvents]           = useState([]);   // merged personal+office for the sidebar
-    const [view, setView]                     = useState('Mese');
-    const [currentDate, setCurrentDate]       = useState(new Date());
+    const [calendars,    setCalendars]    = useState([]);
+    const [activeCalId,  setActiveCalId]  = useState(null);
+    const [events,       setEvents]       = useState([]);
+    const [allEvents,    setAllEvents]    = useState([]);
+    const [view,         setView]         = useState('Mese');
+    const [currentDate,  setCurrentDate]  = useState(new Date());
     const [padrePioThought, setPadrePioThought] = useState('');
-
-    const [showNewEvent, setShowNewEvent]             = useState(false);
-    const [editEvent, setEditEvent]                   = useState(null); // evento da modificare
-    const [showChangePassword, setShowChangePassword] = useState(false);
-    const [showAdminPanel, setShowAdminPanel]         = useState(false);
-    const [selectedDate, setSelectedDate]             = useState('');
+    const [showNewEvent,        setShowNewEvent]        = useState(false);
+    const [editEvent,           setEditEvent]           = useState(null);
+    const [showChangePassword,  setShowChangePassword]  = useState(false);
+    const [showAdminPanel,      setShowAdminPanel]      = useState(false);
+    const [selectedDate,        setSelectedDate]        = useState('');
 
     const activeCalendar = calendars.find(c => c.id === activeCalId);
-    const canEditActiveCalendar = activeCalendar?.is_global
-        ? ['capo', 'admin'].includes(role)
-        : true; // Personal: always editable by owner
+    const canEdit = activeCalendar?.is_global ? ['capo','admin'].includes(role) : true;
 
     const loadCalendars = useCallback(async () => {
-        try {
-            const data = await fetchAPI('/calendars', { headers: authHeaders });
-            setCalendars(data);
-            if (data.length > 0) setActiveCalId(data[0].id);
-        } catch (err) { console.error(err.message); }
+        try { const d = await fetchAPI('/calendars', { headers:authHeaders }); setCalendars(d); if(d.length>0) setActiveCalId(d[0].id); }
+        catch(err) { console.error(err.message); }
     }, [token]);
 
-    // Fetches events from EVERY calendar and merges them for the sidebar
-    // Always runs independently from the active calendar selection
-    const loadAllEvents = useCallback(async (calendarList) => {
-        if (!calendarList || calendarList.length === 0) return;
+    const loadAllEvents = useCallback(async (calList) => {
+        if (!calList||calList.length===0) return;
         try {
-            const results = await Promise.all(
-                calendarList.map(cal =>
-                    fetchAPI(`/events/${cal.id}`, { headers: authHeaders })
-                        .catch(() => []) // don't let one failure break everything
-                )
-            );
-            // Flatten, deduplicate by id+source (personal calendar already includes office events)
-            const seen = new Set();
-            const merged = [];
-            results.flat().forEach(ev => {
-                const key = `${ev.id}-${ev.source}`;
-                if (!seen.has(key)) { seen.add(key); merged.push(ev); }
-            });
+            const results = await Promise.all(calList.map(cal => fetchAPI(`/events/${cal.id}`, { headers:authHeaders }).catch(()=>[])));
+            const seen=new Set(), merged=[];
+            results.flat().forEach(ev => { const k=`${ev.id}-${ev.source}`; if(!seen.has(k)){seen.add(k);merged.push(ev);} });
             setAllEvents(merged);
-        } catch (err) { console.error('loadAllEvents error:', err.message); }
+        } catch(err) { console.error(err.message); }
     }, [token]);
 
     const loadEvents = useCallback(async (calId) => {
         if (!calId) return;
-        try {
-            const data = await fetchAPI(`/events/${calId}`, { headers: authHeaders });
-            setEvents(data);
-            // Also refresh the sidebar with the latest merged data from all calendars
-            // Use functional update to avoid stale closure on `calendars`
-            setCalendars(prev => { loadAllEvents(prev); return prev; });
-        } catch (err) { console.error(err.message); }
+        try { const d = await fetchAPI(`/events/${calId}`, { headers:authHeaders }); setEvents(d); setCalendars(prev => { loadAllEvents(prev); return prev; }); }
+        catch(err) { console.error(err.message); }
     }, [token]);
 
     const loadPadrePio = useCallback(async () => {
-        try {
-            const dateStr = currentDate.toISOString().split('T')[0];
-            const d = await fetchAPI(`/padrepio/thought/${dateStr}`, { headers: authHeaders });
-            setPadrePioThought(d.thought);
-        } catch { setPadrePioThought(''); }
+        try { const ds=currentDate.toISOString().split('T')[0]; const d=await fetchAPI(`/padrepio/thought/${ds}`,{headers:authHeaders}); setPadrePioThought(d.thought); }
+        catch { setPadrePioThought(''); }
     }, [currentDate, token]);
 
     useEffect(() => { loadCalendars(); }, []);
     useEffect(() => { loadEvents(activeCalId); }, [activeCalId, currentDate, view]);
-    // Re-load ALL events for the sidebar whenever: calendars are set, or active calendar changes
-    // (active calendar change = a new event may have been added)
     useEffect(() => { loadAllEvents(calendars); }, [calendars]);
-    useEffect(() => {
-        if (activeCalendar?.type === 'Personale') loadPadrePio();
-        else setPadrePioThought('');
-    }, [activeCalId, calendars, currentDate]);
+    useEffect(() => { if(activeCalendar?.type==='Personale') loadPadrePio(); else setPadrePioThought(''); }, [activeCalId, calendars, currentDate]);
 
-    // ── Overlap detection helpers ────────────────────────────────
-    const timeToMinutes = (t) => {
-        if (!t) return null;
-        const [h, m] = t.substring(0, 5).split(':').map(Number);
-        return h * 60 + m;
-    };
+    // ── Overlap helpers ──────────────────────────────────────
+    const timeToMin = t => { if(!t) return null; const [h,m]=t.substring(0,5).split(':').map(Number); return h*60+m; };
+    const eventsOverlap = (a,b) => { if(a.event_date!==b.event_date) return false; const aS=timeToMin(a.start_time||a.event_time),aE=timeToMin(a.end_time||a.event_end_time),bS=timeToMin(b.start_time||b.event_time),bE=timeToMin(b.end_time||b.event_end_time); if(aS===null||aE===null||bS===null||bE===null) return false; return aS<bE&&aE>bS; };
+    const getOverlapIds = (evList) => { const ids=new Set(); for(let i=0;i<evList.length;i++) for(let j=i+1;j<evList.length;j++) if(eventsOverlap(evList[i],evList[j])){ids.add(evList[i].id+'-'+evList[i].source);ids.add(evList[j].id+'-'+evList[j].source);} return ids; };
 
-    // Returns true if two events overlap in time on the same date
-    const eventsOverlap = (a, b) => {
-        if (a.event_date !== b.event_date) return false;
-        const aStart = timeToMinutes(a.start_time || a.event_time);
-        const aEnd   = timeToMinutes(a.end_time   || a.event_end_time);
-        const bStart = timeToMinutes(b.start_time || b.event_time);
-        const bEnd   = timeToMinutes(b.end_time   || b.event_end_time);
-        if (aStart === null || aEnd === null || bStart === null || bEnd === null) return false;
-        return aStart < bEnd && aEnd > bStart;
-    };
+    const chipClass = (ev, isOvlp) => isOvlp ? 'chip chip-ov' : ev.source==='office' ? 'chip chip-o' : 'chip chip-p';
 
-    // Returns a Set of event ids that overlap with at least one other event
-    const getOverlappingIds = (evList) => {
-        const ids = new Set();
-        for (let i = 0; i < evList.length; i++) {
-            for (let j = i + 1; j < evList.length; j++) {
-                if (eventsOverlap(evList[i], evList[j])) {
-                    ids.add(evList[i].id + '-' + evList[i].source);
-                    ids.add(evList[j].id + '-' + evList[j].source);
-                }
-            }
-        }
-        return ids;
-    };
-
-    // ── Event styling by source + overlap state ───────────────────
-    const eventStyle = (ev, isOverlapping) => {
-        if (isOverlapping) {
-            // Striped gradient to signal overlap — visible regardless of type
-            if (ev.source === 'office')
-                return 'text-orange-900 border border-orange-400 bg-gradient-to-r from-amber-200 via-orange-100 to-red-100 font-semibold';
-            return 'text-purple-900 border border-purple-400 bg-gradient-to-r from-indigo-200 via-purple-100 to-pink-100 font-semibold';
-        }
-        if (ev.source === 'office') return 'bg-amber-100 text-amber-800 border-l-2 border-amber-400';
-        return 'bg-indigo-100 text-indigo-800 border-l-2 border-indigo-300';
-    };
-
-    const eventDotColor = (ev) => ev.source === 'office' ? 'bg-amber-400' : 'bg-indigo-400';
-
-    // ── Calendar renders ─────────────────────────────────────
+    // ── renderMese ───────────────────────────────────────────
     const renderMese = () => {
-        const year = currentDate.getFullYear();
-        const month = currentDate.getMonth();
-        const daysInMonth = new Date(year, month + 1, 0).getDate();
-        const firstDay = new Date(year, month, 1).getDay();
-        const days = [];
-        const todayStr = new Date().toISOString().split('T')[0];
+        const year=currentDate.getFullYear(), month=currentDate.getMonth();
+        const daysInMonth=new Date(year,month+1,0).getDate();
+        const firstDay=new Date(year,month,1).getDay();
+        const todayStr=new Date().toISOString().split('T')[0];
+        const days=[];
 
-        // Empty cells before the 1st of the month (Monday-based grid)
-        for (let i = 0; i < (firstDay === 0 ? 6 : firstDay - 1); i++) {
-            days.push(<div key={`e-${i}`} className="bg-gray-50 border border-gray-100 min-h-[90px]"></div>);
-        }
+        for(let i=0;i<(firstDay===0?6:firstDay-1);i++) days.push(<div key={`e-${i}`} className="cal-empty"></div>);
 
-        for (let d = 1; d <= daysInMonth; d++) {
-            const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-            const dayEvents = events.filter(e => e.event_date && e.event_date.startsWith(dateStr));
-            const dayOverlapIds = getOverlappingIds(dayEvents);
-            const isToday = todayStr === dateStr;
-
+        for(let d=1;d<=daysInMonth;d++){
+            const dateStr=`${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+            const dayEvents=events.filter(e=>e.event_date&&e.event_date.startsWith(dateStr));
+            const ovIds=getOverlapIds(dayEvents);
+            const isToday=todayStr===dateStr;
             days.push(
-                <div key={d}
-                    className={`min-h-[90px] bg-white border border-gray-200 p-1.5 cursor-pointer hover:bg-blue-50 transition ${isToday ? 'ring-2 ring-inset ring-indigo-500' : ''}`}
-                    onClick={() => { setSelectedDate(dateStr); setEditEvent(null); setShowNewEvent(true); }}>
-
-                    {/* Day number */}
-                    <div className={`text-xs font-bold mb-1 ${isToday ? 'text-indigo-600' : 'text-gray-600'}`}>{d}</div>
-
-                    {/* Event chips */}
-                    <div className="space-y-0.5">
-                        {dayEvents.slice(0, 3).map(ev => {
-                            const key = `${ev.id}-${ev.source}`;
-                            const isOvlp = dayOverlapIds.has(key);
-                            const timeLabel = (ev.start_time || ev.event_time)
-                                ? (ev.start_time || ev.event_time).substring(0, 5) + ' '
-                                : '';
+                <div key={d} className={`cal-cell ${isToday?'cal-today':''}`}
+                    onClick={()=>{ setSelectedDate(dateStr); setEditEvent(null); setShowNewEvent(true); }}>
+                    <div style={{marginBottom:'5px'}}>
+                        {isToday
+                            ? <span className="day-num-today">{d}</span>
+                            : <span style={{fontSize:'11px',fontWeight:600,color:'rgba(40,40,90,.60)'}}>{d}</span>}
+                    </div>
+                    <div style={{display:'flex',flexDirection:'column',gap:'2px'}}>
+                        {dayEvents.slice(0,3).map(ev=>{
+                            const k=`${ev.id}-${ev.source}`;
+                            const isOvlp=ovIds.has(k);
+                            const tl=(ev.start_time||ev.event_time)?(ev.start_time||ev.event_time).substring(0,5)+' ':'';
                             return (
-                                <div key={key}
-                                    onClick={e => {
-                                        e.stopPropagation();
-                                        if (ev.source === 'office' && !['capo','admin'].includes(role)) return;
-                                        setEditEvent(ev);
-                                        setShowNewEvent(true);
-                                    }}
-                                    className={`text-xs px-1.5 py-0.5 rounded truncate cursor-pointer hover:opacity-80 transition ${eventStyle(ev, isOvlp)}`}
-                                    title={`${ev.source === 'office' ? '[Ufficio] ' : ''}${ev.title}${isOvlp ? ' ⚠ Sovrapposizione' : ''}`}>
-                                    {isOvlp ? '⚠ ' : ''}{timeLabel}{ev.title}
+                                <div key={k} className={chipClass(ev,isOvlp)}
+                                    onClick={e=>{e.stopPropagation();if(ev.source==='office'&&!['capo','admin'].includes(role))return;setEditEvent(ev);setShowNewEvent(true);}}>
+                                    {isOvlp?'⚠ ':''}{tl}{ev.title}
                                 </div>
                             );
                         })}
-
-                        {/* Overflow counter */}
-                        {dayEvents.length > 3 && (
-                            <div className="text-xs text-gray-400 pl-1">+{dayEvents.length - 3} altri</div>
-                        )}
+                        {dayEvents.length>3 && <div style={{fontSize:'10px',color:'rgba(60,60,120,.45)',paddingLeft:'4px'}}>+{dayEvents.length-3} altri</div>}
                     </div>
                 </div>
             );
         }
 
         return (
-            <div className="fade-in">
-                {/* Day-of-week header */}
-                <div className="grid grid-cols-7 gap-px bg-gray-200 mb-px rounded-t-lg overflow-hidden">
-                    {['Lun','Mar','Mer','Gio','Ven','Sab','Dom'].map(d => (
-                        <div key={d} className="bg-gray-100 text-center py-2 text-xs font-semibold text-gray-500 uppercase">{d}</div>
+            <div className="fu">
+                {/* Day headers */}
+                <div style={{display:'grid',gridTemplateColumns:'repeat(7,1fr)',gap:'4px',marginBottom:'4px'}}>
+                    {['Lun','Mar','Mer','Gio','Ven','Sab','Dom'].map(d=>(
+                        <div key={d} style={{textAlign:'center',padding:'8px 0',fontSize:'10px',fontWeight:700,textTransform:'uppercase',letterSpacing:'.06em',color:'rgba(60,60,120,.45)'}}>{d}</div>
                     ))}
                 </div>
-
-                {/* Day cells */}
-                <div className="grid grid-cols-7 gap-px bg-gray-200 rounded-b-lg overflow-hidden">
-                    {days}
-                </div>
-
-                {/* Legend — only in Personal calendar view */}
-                {activeCalendar?.type === 'Personale' && (
-                    <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-gray-500">
-                        <span className="flex items-center space-x-1.5">
-                            <span className="w-3 h-3 rounded bg-indigo-400 inline-block border-l-2 border-indigo-600"></span>
-                            <span>Personale</span>
-                        </span>
-                        <span className="flex items-center space-x-1.5">
-                            <span className="w-3 h-3 rounded bg-amber-300 inline-block border-l-2 border-amber-500"></span>
-                            <span>Ufficio (condiviso)</span>
-                        </span>
-                        <span className="flex items-center space-x-1.5">
-                            <span className="w-3 h-3 rounded inline-block border border-purple-400" style={{background:'linear-gradient(to right,#c7d2fe,#f3e8ff)'}}></span>
-                            <span>Personale sovrapposto</span>
-                        </span>
-                        <span className="flex items-center space-x-1.5">
-                            <span className="w-3 h-3 rounded inline-block border border-orange-400" style={{background:'linear-gradient(to right,#fde68a,#fed7aa)'}}></span>
-                            <span>Ufficio sovrapposto</span>
-                        </span>
+                {/* Grid */}
+                <div style={{display:'grid',gridTemplateColumns:'repeat(7,1fr)',gap:'4px'}}>{days}</div>
+                {/* Legend */}
+                {activeCalendar?.type==='Personale' && (
+                    <div style={{marginTop:'12px',display:'flex',flexWrap:'wrap',gap:'12px'}}>
+                        {[['rgba(10,132,255,0.60)','Personale'],['rgba(255,159,10,0.65)','Ufficio (condiviso)'],['rgba(255,69,58,0.60)','Sovrapposti']].map(([c,l])=>(
+                            <span key={l} style={{display:'flex',alignItems:'center',gap:'6px',fontSize:'11px',color:'rgba(60,60,120,.50)'}}>
+                                <span style={{width:'8px',height:'8px',borderRadius:'2px',background:c,display:'inline-block'}}></span>{l}
+                            </span>
+                        ))}
                     </div>
                 )}
             </div>
         );
     };
 
+    // ── renderGiorno ─────────────────────────────────────────
     const renderGiorno = () => {
-        const dateStr = currentDate.toISOString().split('T')[0];
-        const dayEvents = events.filter(e => e.event_date && e.event_date.startsWith(dateStr));
-        const overlapIds = getOverlappingIds(dayEvents);
-
+        const dateStr=currentDate.toISOString().split('T')[0];
+        const dayEvents=events.filter(e=>e.event_date&&e.event_date.startsWith(dateStr));
+        const ovIds=getOverlapIds(dayEvents);
         return (
-            <div className="bg-white rounded-xl shadow p-6 fade-in min-h-[400px]">
-                <h3 className="text-xl font-bold text-gray-800 border-b pb-4 mb-4 capitalize">
-                    {currentDate.toLocaleDateString('it-IT', { weekday:'long', year:'numeric', month:'long', day:'numeric' })}
+            <div className="glass-lg fu" style={{borderRadius:'20px',padding:'24px',minHeight:'400px'}}>
+                <h3 style={{fontSize:'16px',fontWeight:600,color:'rgba(15,15,40,.80)',marginBottom:'16px',paddingBottom:'14px',borderBottom:'1px solid rgba(255,255,255,0.35)',textTransform:'capitalize'}}>
+                    {currentDate.toLocaleDateString('it-IT',{weekday:'long',year:'numeric',month:'long',day:'numeric'})}
                 </h3>
-                {dayEvents.length === 0 ? (
-                    <p className="text-gray-400 text-center py-12 italic">Nessun evento per questa giornata.</p>
+                {dayEvents.length===0 ? (
+                    <div style={{textAlign:'center',padding:'48px 0',color:'rgba(60,60,120,.38)'}}>
+                        <i className="ph ph-coffee" style={{fontSize:'32px',display:'block',marginBottom:'10px'}}></i>
+                        <p style={{fontSize:'13px',fontStyle:'italic'}}>Nessun evento per questa giornata</p>
+                    </div>
                 ) : (
-                    <ul className="space-y-2">
-                        {dayEvents.map(ev => {
-                            const key = `${ev.id}-${ev.source}`;
-                            const isOvlp = overlapIds.has(key);
-                            const isOffice = ev.source === 'office';
-                            const startT = ev.start_time || ev.event_time;
-                            const endT   = ev.end_time   || ev.event_end_time;
-                            const borderColor = isOvlp
-                                ? (isOffice ? 'border-orange-400' : 'border-purple-400')
-                                : (isOffice ? 'border-amber-400'  : 'border-indigo-400');
-                            const bgColor = isOvlp
-                                ? (isOffice ? 'bg-orange-50' : 'bg-purple-50')
-                                : (isOffice ? 'bg-amber-50'  : 'bg-gray-50');
-                            const timeColor = isOvlp
-                                ? (isOffice ? 'text-orange-600' : 'text-purple-600')
-                                : (isOffice ? 'text-amber-600'  : 'text-indigo-600');
+                    <div style={{display:'flex',flexDirection:'column',gap:'8px'}}>
+                        {dayEvents.map(ev=>{
+                            const k=`${ev.id}-${ev.source}`;
+                            const isOvlp=ovIds.has(k);
+                            const isOffice=ev.source==='office';
+                            const startT=ev.start_time||ev.event_time;
+                            const endT=ev.end_time||ev.event_end_time;
+                            const barColor=isOvlp?'var(--red)':isOffice?'var(--amber)':'var(--blue)';
                             return (
-                                <li key={key} className={`flex border-l-4 ${borderColor} ${bgColor} p-3 rounded-r-lg shadow-sm`}>
-                                    <div className={`font-bold w-28 flex-shrink-0 text-sm ${timeColor}`}>
-                                        {startT
-                                            ? `${startT.substring(0,5)}${endT ? '–' + endT.substring(0,5) : ''}`
-                                            : 'Tutto il giorno'}
+                                <div key={k} className="drow" style={{display:'flex',gap:'12px',alignItems:'flex-start',borderLeft:`3px solid ${barColor}`}}>
+                                    <div style={{width:'70px',flexShrink:0,fontSize:'12px',fontWeight:600,color:barColor,lineHeight:1.4}}>
+                                        {startT?`${startT.substring(0,5)}${endT?'–'+endT.substring(0,5):''}` : 'Tutto il giorno'}
                                     </div>
-                                    <div className="flex-1 min-w-0">
-                                        <div className="flex items-center flex-wrap gap-1.5">
-                                            <h4 className="font-semibold text-gray-800 truncate">{ev.title}</h4>
-                                            {isOffice && (
-                                                <span className="text-xs bg-amber-200 text-amber-700 px-1.5 py-0.5 rounded font-medium flex-shrink-0">Ufficio</span>
-                                            )}
-                                            {isOvlp && (
-                                                <span className="text-xs bg-red-100 text-red-600 border border-red-300 px-1.5 py-0.5 rounded font-medium flex-shrink-0">
-                                                    ⚠ Sovrapposizione
-                                                </span>
-                                            )}
+                                    <div style={{flex:1}}>
+                                        <div style={{display:'flex',alignItems:'center',gap:'8px',flexWrap:'wrap'}}>
+                                            <span style={{fontSize:'14px',fontWeight:600,color:'rgba(15,15,40,.85)'}}>{ev.title}</span>
+                                            {isOffice&&<span style={{fontSize:'10px',fontWeight:600,background:'rgba(255,159,10,0.14)',border:'1px solid rgba(255,159,10,0.25)',color:'rgba(140,70,0,.85)',padding:'1px 7px',borderRadius:'5px'}}>Ufficio</span>}
+                                            {isOvlp&&<span style={{fontSize:'10px',background:'rgba(255,69,58,0.12)',border:'1px solid rgba(255,69,58,0.25)',color:'var(--red)',padding:'1px 7px',borderRadius:'5px'}}>⚠ Sovrapposizione</span>}
                                         </div>
-                                        {ev.description && <p className="text-xs text-gray-500 mt-0.5 truncate">{ev.description}</p>}
+                                        {ev.description&&<p style={{fontSize:'12px',color:'rgba(60,60,120,.50)',marginTop:'3px'}}>{ev.description}</p>}
                                     </div>
-                                    {(isOffice ? ['capo','admin'].includes(role) : true) && (
-                                        <div className="flex items-center space-x-1 ml-2 flex-shrink-0">
-                                            <button
-                                                onClick={e => { e.stopPropagation(); setEditEvent(ev); setShowNewEvent(true); }}
-                                                className="p-1 text-gray-300 hover:text-indigo-500 transition" title="Modifica">
-                                                <i className="ph ph-pencil text-base"></i>
-                                            </button>
-                                            <button
-                                                onClick={async (e) => {
-                                                    e.stopPropagation();
-                                                    if (!confirm(`Eliminare "${ev.title}"?`)) return;
-                                                    try {
-                                                        await fetchAPI(`/events/${ev.id}`, { method: 'DELETE', headers: authHeaders });
-                                                        loadEvents(activeCalId);
-                                                    } catch (err) { alert(err.message); }
-                                                }}
-                                                className="p-1 text-gray-300 hover:text-red-400 transition" title="Elimina">
-                                                <i className="ph ph-trash text-base"></i>
-                                            </button>
+                                    {(isOffice?['capo','admin'].includes(role):true) && (
+                                        <div style={{display:'flex',gap:'4px'}}>
+                                            <button onClick={e=>{e.stopPropagation();setEditEvent(ev);setShowNewEvent(true);}} style={{padding:'5px',background:'none',border:'none',cursor:'pointer',color:'rgba(60,60,120,.40)',transition:'color .15s',borderRadius:'6px'}} onMouseEnter={e=>e.currentTarget.style.color='var(--blue)'} onMouseLeave={e=>e.currentTarget.style.color='rgba(60,60,120,.40)'}><i className="ph ph-pencil" style={{fontSize:'14px'}}></i></button>
+                                            <button onClick={async e=>{e.stopPropagation();if(!confirm(`Eliminare "${ev.title}"?`))return;try{await fetchAPI(`/events/${ev.id}`,{method:'DELETE',headers:authHeaders});loadEvents(activeCalId);}catch(err){alert(err.message);}}} style={{padding:'5px',background:'none',border:'none',cursor:'pointer',color:'rgba(60,60,120,.40)',transition:'color .15s',borderRadius:'6px'}} onMouseEnter={e=>e.currentTarget.style.color='var(--red)'} onMouseLeave={e=>e.currentTarget.style.color='rgba(60,60,120,.40)'}><i className="ph ph-trash" style={{fontSize:'14px'}}></i></button>
                                         </div>
                                     )}
-                                </li>
+                                </div>
                             );
                         })}
-                    </ul>
+                    </div>
                 )}
-                <button onClick={() => { setSelectedDate(dateStr); setEditEvent(null); setShowNewEvent(true); }}
-                    className="mt-5 flex items-center text-indigo-600 font-semibold hover:text-indigo-800 transition text-sm">
-                    <i className="ph ph-plus-circle text-xl mr-2"></i> Aggiungi Evento
+                <button onClick={()=>{setSelectedDate(dateStr);setEditEvent(null);setShowNewEvent(true);}} style={{marginTop:'20px',display:'flex',alignItems:'center',gap:'6px',background:'none',border:'none',cursor:'pointer',color:'var(--blue)',fontSize:'13px',fontWeight:600,fontFamily:'var(--font)',padding:'0',transition:'opacity .18s'}} onMouseEnter={e=>e.currentTarget.style.opacity='.75'} onMouseLeave={e=>e.currentTarget.style.opacity='1'}>
+                    <i className="ph ph-plus-circle" style={{fontSize:'18px'}}></i> Aggiungi Evento
                 </button>
             </div>
         );
     };
 
-    // ── Navigation ───────────────────────────────────────────
-    const navigate = (dir) => {
-        const nd = new Date(currentDate);
-        if (view === 'Mese')  nd.setMonth(nd.getMonth() + dir);
-        if (view === 'Giorno') nd.setDate(nd.getDate() + dir);
-        if (view === 'Anno')  nd.setFullYear(nd.getFullYear() + dir);
-        setCurrentDate(nd);
+    // ── renderAnno ───────────────────────────────────────────
+    const renderAnno = () => {
+        const year=currentDate.getFullYear();
+        const months=Array.from({length:12},(_,i)=>i);
+        const todayStr=new Date().toISOString().split('T')[0];
+        return (
+            <div className="fu" style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:'12px'}}>
+                {months.map(m=>{
+                    const mName=new Date(year,m,1).toLocaleDateString('it-IT',{month:'long'});
+                    const dInM=new Date(year,m+1,0).getDate();
+                    const fDay=new Date(year,m,1).getDay();
+                    const mEvents=events.filter(e=>e.event_date&&e.event_date.startsWith(`${year}-${String(m+1).padStart(2,'0')}`));
+                    return (
+                        <div key={m} className="yr-cell" onClick={()=>{setCurrentDate(new Date(year,m,1));setView('Mese');}}>
+                            <div style={{fontSize:'11px',fontWeight:700,textTransform:'capitalize',color:'rgba(15,15,40,.75)',marginBottom:'8px',letterSpacing:'-.01em'}}>{mName}</div>
+                            <div style={{display:'grid',gridTemplateColumns:'repeat(7,1fr)',gap:'1px'}}>
+                                {['L','M','M','G','V','S','D'].map((d,i)=><div key={i} style={{textAlign:'center',fontSize:'8px',color:'rgba(60,60,120,.40)',fontWeight:600,padding:'1px 0'}}>{d}</div>)}
+                                {Array.from({length:fDay===0?6:fDay-1}).map((_,i)=><div key={`e-${i}`}></div>)}
+                                {Array.from({length:dInM},(_,i)=>{
+                                    const d=i+1;
+                                    const ds=`${year}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+                                    const hasTd=ds===todayStr;
+                                    const hasEv=mEvents.some(e=>e.event_date&&e.event_date.startsWith(ds));
+                                    return (
+                                        <div key={d} style={{textAlign:'center',padding:'1.5px',position:'relative'}}>
+                                            <span style={{fontSize:'8.5px',fontWeight:hasTd?700:400,color:hasTd?'#fff':'rgba(40,40,90,.65)',background:hasTd?'var(--blue)':'transparent',borderRadius:'50%',width:'14px',height:'14px',display:'inline-flex',alignItems:'center',justifyContent:'center'}}>{d}</span>
+                                            {hasEv&&!hasTd&&<span style={{position:'absolute',bottom:'1px',left:'50%',transform:'translateX(-50%)',width:'3px',height:'3px',borderRadius:'50%',background:'var(--blue)',opacity:.7}}></span>}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                            {mEvents.length>0&&<div style={{marginTop:'8px',fontSize:'10px',color:'rgba(10,132,255,.75)',fontWeight:600}}>{mEvents.length} event{mEvents.length===1?'o':'i'}</div>}
+                        </div>
+                    );
+                })}
+            </div>
+        );
     };
 
-    const calIcon = (type) => type === 'Ufficio' ? 'ph-briefcase' : 'ph-user';
+    const navigate = (dir) => { const nd=new Date(currentDate); if(view==='Mese')nd.setMonth(nd.getMonth()+dir); if(view==='Giorno')nd.setDate(nd.getDate()+dir); if(view==='Anno')nd.setFullYear(nd.getFullYear()+dir); setCurrentDate(nd); };
+    const calIcon  = (type) => type==='Ufficio' ? 'ph-briefcase' : 'ph-user';
 
     return (
-        <div className="flex h-screen bg-gray-50 overflow-hidden">
+        <div style={{display:'flex',height:'100vh',overflow:'hidden'}}>
 
-            {/* ── SIDEBAR ── */}
-            <div className="w-64 bg-white border-r shadow-sm flex flex-col z-10">
-                <div className="p-5 border-b flex items-center space-x-3">
-                    <div className="bg-indigo-600 text-white p-2 rounded-lg">
-                        <i className="ph ph-calendar-duotone text-2xl"></i>
+            {/* ── SIDEBAR ─────────────────────────────────── */}
+            <div className="glass-lg" style={{width:'240px',flexShrink:0,display:'flex',flexDirection:'column',borderRadius:'0',zIndex:10,borderTop:'none',borderBottom:'none',borderLeft:'none'}}>
+                {/* Logo */}
+                <div style={{padding:'20px 20px 16px',borderBottom:'1px solid rgba(255,255,255,0.28)'}}>
+                    <div style={{display:'flex',alignItems:'center',gap:'12px'}}>
+                        <div className="glass" style={{padding:'8px',borderRadius:'12px',boxShadow:'0 4px 16px rgba(10,132,255,0.18),inset 0 1px 0 rgba(255,255,255,0.80)'}}>
+                            <i className="ph ph-calendar-duotone" style={{fontSize:'22px',color:'var(--blue)'}}></i>
+                        </div>
+                        <span style={{fontSize:'17px',fontWeight:700,letterSpacing:'-.03em',color:'rgba(15,15,40,.85)'}}>Calendari</span>
                     </div>
-                    <span className="font-bold text-xl text-gray-800">Calendari</span>
                 </div>
 
-                <div className="p-4 flex-1 overflow-y-auto">
-                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">I Miei Calendari</p>
-                    <div className="space-y-1">
-                        {calendars.map(cal => (
-                            <button key={cal.id} onClick={() => setActiveCalId(cal.id)}
-                                className={`w-full flex items-center px-3 py-2.5 rounded-xl transition text-sm ${activeCalId === cal.id ? 'bg-indigo-50 text-indigo-700 font-semibold ring-1 ring-indigo-200' : 'text-gray-600 hover:bg-gray-50'}`}>
-                                <i className={`ph ${calIcon(cal.type)} text-lg mr-3`}></i>
-                                <span>{cal.type}</span>
-                                {!!cal.is_global && (
-                                    <span className="ml-auto text-xs bg-amber-100 text-amber-600 px-1.5 py-0.5 rounded-full font-medium">Condiviso</span>
-                                )}
+                {/* Calendar list */}
+                <div style={{padding:'16px',flex:1,overflowY:'auto'}}>
+                    <div className="slabel" style={{marginBottom:'10px'}}>I Miei Calendari</div>
+                    <div style={{display:'flex',flexDirection:'column',gap:'2px'}}>
+                        {calendars.map(cal=>(
+                            <button key={cal.id} onClick={()=>setActiveCalId(cal.id)}
+                                className={`cbtn${activeCalId===cal.id?' active':''}`}>
+                                <i className={`ph ${calIcon(cal.type)}`} style={{fontSize:'16px',marginRight:'10px',flexShrink:0,color:activeCalId===cal.id?'var(--blue)':'rgba(60,60,120,.55)'}}></i>
+                                <span style={{flex:1}}>{cal.type}</span>
+                                {!!cal.is_global&&<span style={{fontSize:'9.5px',fontWeight:700,background:'rgba(255,159,10,0.16)',border:'1px solid rgba(255,159,10,0.25)',color:'rgba(140,70,0,.80)',padding:'1px 6px',borderRadius:'8px'}}>Condiviso</span>}
                             </button>
                         ))}
                     </div>
 
-                    {/* Admin Panel link */}
-                    {role === 'admin' && (
-                        <div className="mt-5">
-                            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Amministrazione</p>
-                            <button onClick={() => setShowAdminPanel(true)}
-                                className="w-full flex items-center px-3 py-2.5 rounded-xl text-sm text-purple-700 bg-purple-50 hover:bg-purple-100 font-semibold transition">
-                                <i className="ph ph-shield-star text-lg mr-3"></i>
+                    {/* Admin link */}
+                    {role==='admin'&&(
+                        <div style={{marginTop:'20px'}}>
+                            <div className="slabel" style={{marginBottom:'10px'}}>Amministrazione</div>
+                            <button onClick={()=>setShowAdminPanel(true)} className="cbtn" style={{background:'rgba(94,92,230,0.12)',border:'1px solid rgba(94,92,230,0.22)',color:'var(--violet)'}}>
+                                <i className="ph ph-shield-star" style={{fontSize:'16px',marginRight:'10px',flexShrink:0,color:'var(--violet)'}}></i>
                                 Pannello Admin
                             </button>
                         </div>
                     )}
                 </div>
 
-                {/* Footer */}
-                <div className="p-4 border-t space-y-2">
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-2 min-w-0">
-                            <i className="ph ph-user-circle text-gray-500 text-lg flex-shrink-0"></i>
-                            <span className="text-sm font-medium text-gray-700 truncate">{username}</span>
+                {/* User footer */}
+                <div style={{padding:'14px 16px',borderTop:'1px solid rgba(255,255,255,0.28)'}}>
+                    <div style={{display:'flex',alignItems:'center',gap:'8px',marginBottom:'10px'}}>
+                        <div className="glass" style={{padding:'6px',borderRadius:'10px',flexShrink:0}}>
+                            <i className="ph ph-user-circle" style={{fontSize:'16px',color:'rgba(60,60,120,.60)'}}></i>
                         </div>
-                        <div className="flex items-center space-x-1">
-                            <RoleBadge role={role} />
-                            <button onClick={onLogout} className="ml-1 text-gray-400 hover:text-red-500 transition" title="Esci">
-                                <i className="ph ph-sign-out text-lg"></i>
-                            </button>
+                        <div style={{flex:1,minWidth:0}}>
+                            <div style={{fontSize:'13px',fontWeight:600,color:'rgba(15,15,40,.80)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{username}</div>
+                        </div>
+                        <div style={{display:'flex',alignItems:'center',gap:'4px'}}>
+                            <RoleBadge role={role}/>
+                            <button onClick={onLogout} style={{padding:'4px',background:'none',border:'none',cursor:'pointer',color:'rgba(60,60,120,.40)',transition:'color .15s',marginLeft:'2px'}} onMouseEnter={e=>e.currentTarget.style.color='var(--red)'} onMouseLeave={e=>e.currentTarget.style.color='rgba(60,60,120,.40)'}><i className="ph ph-sign-out" style={{fontSize:'16px'}}></i></button>
                         </div>
                     </div>
-                    <button onClick={() => setShowChangePassword(true)}
-                        className="w-full flex items-center justify-center space-x-2 px-3 py-1.5 text-xs text-gray-500 hover:bg-gray-100 rounded-lg transition">
-                        <i className="ph ph-lock-key"></i><span>Cambia Password</span>
+                    <button onClick={()=>setShowChangePassword(true)} style={{width:'100%',display:'flex',alignItems:'center',justifyContent:'center',gap:'6px',padding:'7px',background:'rgba(255,255,255,0.22)',border:'1px solid rgba(255,255,255,0.40)',borderRadius:'10px',cursor:'pointer',fontSize:'12px',color:'rgba(60,60,120,.55)',fontFamily:'var(--font)',transition:'all .18s'}} onMouseEnter={e=>{e.currentTarget.style.background='rgba(255,255,255,0.35)';}} onMouseLeave={e=>{e.currentTarget.style.background='rgba(255,255,255,0.22)';}}>
+                        <i className="ph ph-lock-key" style={{fontSize:'13px'}}></i> Cambia Password
                     </button>
                 </div>
             </div>
 
-            {/* ── MAIN ── */}
-            <div className="flex-1 flex flex-col min-w-0">
+            {/* ── MAIN ────────────────────────────────────── */}
+            <div style={{flex:1,display:'flex',flexDirection:'column',minWidth:0}}>
 
                 {/* Header */}
-                <header className="bg-white border-b px-8 py-3 flex items-center justify-between shadow-sm">
-                    <div className="flex items-center space-x-3">
-                        <button onClick={() => navigate(-1)} className="p-2 rounded-full hover:bg-gray-100 transition"><i className="ph ph-caret-left"></i></button>
-                        <h2 className="text-lg font-bold text-gray-800 w-52 text-center capitalize">
-                            {view === 'Mese'  && currentDate.toLocaleDateString('it-IT',{month:'long',year:'numeric'})}
-                            {view === 'Giorno' && currentDate.toLocaleDateString('it-IT',{day:'2-digit',month:'long',year:'numeric'})}
-                            {view === 'Anno'  && currentDate.getFullYear()}
-                        </h2>
-                        <button onClick={() => navigate(1)} className="p-2 rounded-full hover:bg-gray-100 transition"><i className="ph ph-caret-right"></i></button>
-                        <button onClick={() => setCurrentDate(new Date())}
-                            className="ml-2 px-3 py-1 text-sm bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200 transition font-medium">
-                            Oggi
-                        </button>
+                <div className="glass" style={{padding:'12px 24px',borderRadius:0,borderTop:'none',borderLeft:'none',borderRight:'none',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+                    <div style={{display:'flex',alignItems:'center',gap:'6px'}}>
+                        <button onClick={()=>navigate(-1)} className="glass" style={{padding:'6px 9px',borderRadius:'10px',border:'1px solid rgba(255,255,255,0.50)',cursor:'pointer',transition:'all .18s',color:'rgba(40,40,90,.65)'}} onMouseEnter={e=>e.currentTarget.style.background='rgba(255,255,255,0.38)'} onMouseLeave={e=>e.currentTarget.style.background='rgba(255,255,255,0.22)'}><i className="ph ph-caret-left" style={{fontSize:'14px'}}></i></button>
+                        <div style={{minWidth:'180px',textAlign:'center',fontSize:'15px',fontWeight:600,color:'rgba(15,15,40,.82)',letterSpacing:'-.02em',textTransform:'capitalize'}}>
+                            {view==='Mese'  && currentDate.toLocaleDateString('it-IT',{month:'long',year:'numeric'})}
+                            {view==='Giorno'&& currentDate.toLocaleDateString('it-IT',{day:'2-digit',month:'long',year:'numeric'})}
+                            {view==='Anno'  && currentDate.getFullYear()}
+                        </div>
+                        <button onClick={()=>navigate(1)} className="glass" style={{padding:'6px 9px',borderRadius:'10px',border:'1px solid rgba(255,255,255,0.50)',cursor:'pointer',transition:'all .18s',color:'rgba(40,40,90,.65)'}} onMouseEnter={e=>e.currentTarget.style.background='rgba(255,255,255,0.38)'} onMouseLeave={e=>e.currentTarget.style.background='rgba(255,255,255,0.22)'}><i className="ph ph-caret-right" style={{fontSize:'14px'}}></i></button>
+                        <button onClick={()=>setCurrentDate(new Date())} className="glass" style={{marginLeft:'4px',padding:'5px 12px',borderRadius:'10px',border:'1px solid rgba(255,255,255,0.50)',cursor:'pointer',fontSize:'12px',fontWeight:600,color:'rgba(40,40,90,.65)',fontFamily:'var(--font)',transition:'all .18s'}} onMouseEnter={e=>e.currentTarget.style.background='rgba(255,255,255,0.38)'} onMouseLeave={e=>e.currentTarget.style.background='rgba(255,255,255,0.22)'}>Oggi</button>
                     </div>
-                    <div className="flex items-center space-x-3">
-                        {/* Pulsante aggiungi evento — nascosto per utenti normali su calendario Ufficio */}
-                        {canEditActiveCalendar && (
-                            <button onClick={() => { setSelectedDate(new Date().toISOString().split('T')[0]); setEditEvent(null); setShowNewEvent(true); }}
-                                className="flex items-center space-x-1.5 px-4 py-1.5 bg-indigo-600 text-white text-sm rounded-lg hover:bg-indigo-700 transition font-semibold">
-                                <i className="ph ph-plus text-base"></i><span>Nuovo Evento</span>
+                    <div style={{display:'flex',alignItems:'center',gap:'10px'}}>
+                        {canEdit&&(
+                            <button onClick={()=>{setSelectedDate(new Date().toISOString().split('T')[0]);setEditEvent(null);setShowNewEvent(true);}} className="btn-p" style={{padding:'7px 16px',fontSize:'13px',display:'flex',alignItems:'center',gap:'6px'}}>
+                                <i className="ph ph-plus" style={{fontSize:'14px'}}></i>Nuovo Evento
                             </button>
                         )}
-                        <div className="flex bg-gray-100 p-1 rounded-lg">
-                            {['Giorno','Mese','Anno'].map(v => (
-                                <button key={v} onClick={() => setView(v)}
-                                    className={`px-3 py-1.5 text-sm rounded-md transition font-medium ${view === v ? 'bg-white text-indigo-700 shadow' : 'text-gray-500 hover:text-gray-700'}`}>
-                                    {v}
-                                </button>
+                        <div className="vsw">
+                            {['Giorno','Mese','Anno'].map(v=>(
+                                <button key={v} onClick={()=>setView(v)} className={`vbtn${view===v?' active':''}`}>{v}</button>
                             ))}
                         </div>
                     </div>
-                </header>
+                </div>
 
-                {/* Padre Pio banner — solo in calendario Personale */}
-                {activeCalendar?.type === 'Personale' && !!padrePioThought && (
-                    <div className="bg-[#fdf6e3] border-b border-[#e9ddb8] px-8 py-3 flex items-start space-x-4 fade-in">
-                        <div className="bg-[#c9a86c] text-white p-2 rounded-full mt-0.5 flex-shrink-0">
-                            <i className="ph ph-quotes text-base"></i>
+                {/* Padre Pio banner */}
+                {activeCalendar?.type==='Personale' && !!padrePioThought && (
+                    <div className="fi" style={{background:'linear-gradient(90deg,rgba(255,220,140,0.22),rgba(255,200,100,0.14))',backdropFilter:'blur(12px)',WebkitBackdropFilter:'blur(12px)',borderBottom:'1px solid rgba(255,180,60,0.20)',padding:'12px 24px',display:'flex',alignItems:'flex-start',gap:'14px'}}>
+                        <div style={{background:'linear-gradient(145deg,rgba(255,180,60,0.70),rgba(255,140,20,0.80))',padding:'6px 8px',borderRadius:'10px',flexShrink:0,boxShadow:'0 2px 10px rgba(255,159,10,0.22)'}}>
+                            <i className="ph ph-quotes" style={{fontSize:'14px',color:'#fff'}}></i>
                         </div>
                         <div>
-                            <p className="text-xs font-bold text-[#8a7040] uppercase tracking-widest mb-0.5">Pensiero del Giorno — Padre Pio</p>
-                            <p className="text-sm font-serif text-[#5c4a28] italic">"{padrePioThought}"</p>
+                            <div style={{fontSize:'9.5px',fontWeight:700,textTransform:'uppercase',letterSpacing:'.08em',color:'rgba(140,90,0,.60)',marginBottom:'3px'}}>Pensiero del Giorno — Padre Pio</div>
+                            <p style={{fontSize:'13px',fontStyle:'italic',color:'rgba(100,60,0,.80)'}}>" {padrePioThought} "</p>
                         </div>
                     </div>
                 )}
 
-                {/* Read-only banner per utenti normali in vista Ufficio */}
+                {/* Read-only banner */}
                 {!!activeCalendar?.is_global && !['capo','admin'].includes(role) && (
-                    <div className="bg-amber-50 border-b border-amber-200 px-8 py-2 flex items-center space-x-2 text-amber-700 text-sm">
-                        <i className="ph ph-eye text-base"></i>
-                        <span>Stai visualizzando il calendario Ufficio condiviso. Solo i <strong>Capo</strong> possono modificarlo.</span>
+                    <div style={{background:'rgba(255,159,10,0.10)',backdropFilter:'blur(8px)',WebkitBackdropFilter:'blur(8px)',borderBottom:'1px solid rgba(255,159,10,0.20)',padding:'9px 24px',display:'flex',alignItems:'center',gap:'8px'}}>
+                        <i className="ph ph-eye" style={{fontSize:'14px',color:'rgba(160,100,0,.80)'}}></i>
+                        <span style={{fontSize:'13px',color:'rgba(120,70,0,.80)'}}>Stai visualizzando il calendario Ufficio condiviso. Solo i <strong>Capo</strong> possono modificarlo.</span>
                     </div>
                 )}
 
                 {/* Calendar area + side panel */}
-                <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
-                    {/* Main calendar grid */}
-                    <div className="flex-1 p-3 lg:p-6 overflow-y-auto">
-                        <div className="max-w-5xl mx-auto">
-                            {view === 'Mese'  && renderMese()}
-                            {view === 'Giorno' && renderGiorno()}
-                            {view === 'Anno'  && renderAnno()}
+                <div style={{flex:1,display:'flex',overflow:'hidden'}}>
+                    <div style={{flex:1,padding:'20px',overflowY:'auto'}}>
+                        <div style={{maxWidth:'1100px',margin:'0 auto'}}>
+                            {view==='Mese'  && renderMese()}
+                            {view==='Giorno'&& renderGiorno()}
+                            {view==='Anno'  && renderAnno()}
                         </div>
                     </div>
-
-                    {/* Upcoming events side panel — hidden in year view */}
-                    {view !== 'Anno' && (
+                    {view!=='Anno' && (
                         <UpcomingPanel
                             events={allEvents}
                             userRole={role}
-                            onEditEvent={ev => { setEditEvent(ev); setShowNewEvent(true); }}
-                            onDeleteEvent={async ev => {
-                                if (!confirm(`Eliminare "${ev.title}"?`)) return;
-                                try {
-                                    await fetchAPI(`/events/${ev.id}`, { method: 'DELETE', headers: authHeaders });
-                                    loadEvents(activeCalId);
-                                } catch (err) { alert(err.message); }
+                            onEditEvent={ev=>{setEditEvent(ev);setShowNewEvent(true);}}
+                            onDeleteEvent={async ev=>{
+                                if(!confirm(`Eliminare "${ev.title}"?`))return;
+                                try{await fetchAPI(`/events/${ev.id}`,{method:'DELETE',headers:authHeaders});loadEvents(activeCalId);}
+                                catch(err){alert(err.message);}
                             }}
                         />
                     )}
                 </div>
             </div>
 
-            {/* ── MODALI ── */}
-            {showNewEvent && (
-                <EventModal
-                    token={token}
-                    activeCalId={activeCalId}
-                    activeCalIsGlobal={editEvent ? editEvent.source === 'office' : !!activeCalendar?.is_global}
-                    userRole={role}
-                    selectedDate={selectedDate}
-                    editEvent={editEvent}
-                    onClose={() => { setShowNewEvent(false); setEditEvent(null); }}
-                    onSaved={() => loadEvents(activeCalId)}
-                />
+            {/* ── MODALS ──────────────────────────────────── */}
+            {showNewEvent&&(
+                <EventModal token={token} activeCalId={activeCalId}
+                    activeCalIsGlobal={editEvent?editEvent.source==='office':!!activeCalendar?.is_global}
+                    userRole={role} selectedDate={selectedDate} editEvent={editEvent}
+                    onClose={()=>{setShowNewEvent(false);setEditEvent(null);}}
+                    onSaved={()=>loadEvents(activeCalId)} />
             )}
-            {showChangePassword && <ChangePasswordModal token={token} onClose={() => setShowChangePassword(false)} />}
-            {showAdminPanel && <AdminPanel token={token} onClose={() => setShowAdminPanel(false)} />}
+            {showChangePassword&&<ChangePasswordModal token={token} onClose={()=>setShowChangePassword(false)}/>}
+            {showAdminPanel&&<AdminPanel token={token} onClose={()=>setShowAdminPanel(false)}/>}
         </div>
     );
 }
 
-ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
 </script>
 </body>
 </html>
