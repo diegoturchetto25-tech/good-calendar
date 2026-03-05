@@ -28,10 +28,13 @@ Getting the project up and running is straightforward thanks to Docker. Follow t
 
 1. **Clone the repository**  
    Open your terminal and clone the project to your local machine:  
-   ```bash git clone \[https://github.com/diegoturchetto25-tech/good-calendar.git\](https://github.com/diegoturchetto25-tech/good-calendar.git)```
+   ```bash
+   git clone \[https://github.com/diegoturchetto25-tech/good-calendar.git\](https://github.com/diegoturchetto25-tech/good-calendar.git)```
 
 2. **Navigate to the project directory**  
-   ```bash cd good-calendar```
+   ```bash
+   cd good-calendar
+   ```
 
 3. **Build and start the containers**  
    Use Docker Compose to build the images and start the database, backend, and frontend services simultaneously:  
