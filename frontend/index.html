@@ -392,6 +392,319 @@
             align-items: center;
             gap: 4px;
         }
+
+        /* ── View transition ─────────────────────────────────────── */
+        @keyframes slideInFromLeft {
+            from { opacity:0; transform: translateX(-18px) scale(.98); }
+            to   { opacity:1; transform: translateX(0) scale(1); }
+        }
+        @keyframes slideInFromRight {
+            from { opacity:0; transform: translateX(18px) scale(.98); }
+            to   { opacity:1; transform: translateX(0) scale(1); }
+        }
+        .slide-in-left  { animation: slideInFromLeft  .26s cubic-bezier(.22,1,.36,1) both; }
+        .slide-in-right { animation: slideInFromRight .26s cubic-bezier(.22,1,.36,1) both; }
+
+        /* ── Day number clickable ─────────────────────────────────── */
+        .day-num-btn {
+            display: inline-flex; align-items: center; justify-content: center;
+            width: 22px; height: 22px; border-radius: 50%;
+            font-size: 11px; font-weight: 600; color: rgba(40,40,90,.65);
+            cursor: pointer; transition: all .16s ease;
+            border: 1px solid transparent;
+        }
+        .day-num-btn:hover {
+            background: rgba(10,132,255,0.14);
+            border-color: rgba(10,132,255,0.28);
+            color: var(--blue);
+            box-shadow: 0 0 10px rgba(10,132,255,0.18);
+        }
+        .year-day-num {
+            font-size: 8.5px; font-weight: 400; color: rgba(40,40,90,.65);
+            border-radius: 50%; width: 14px; height: 14px;
+            display: inline-flex; align-items: center; justify-content: center;
+            cursor: pointer; transition: all .14s ease;
+        }
+        .year-day-num:hover {
+            background: rgba(10,132,255,0.18) !important;
+            color: var(--blue) !important;
+            font-weight: 600;
+        }
+
+        /* ── Day view enhanced ───────────────────────────────────── */
+        .dv-back-btn {
+            display: inline-flex; align-items: center; gap: 6px;
+            background: rgba(255,255,255,0.28);
+            border: 1px solid rgba(255,255,255,0.55);
+            border-radius: 10px; padding: 6px 14px;
+            font-size: 12.5px; font-weight: 600; color: rgba(10,132,255,.85);
+            cursor: pointer; transition: all .18s;
+            font-family: var(--font); margin-bottom: 16px;
+        }
+        .dv-back-btn:hover { background: rgba(255,255,255,0.44); transform: translateX(-2px); }
+
+        /* ── Liquid Glass Date Picker ─────────────────────────────── */
+        .dp-field  { position: relative; width: 100%; }
+        .dp-trigger {
+            width: 100%; display: flex; align-items: center; justify-content: space-between;
+            padding: 10px 14px;
+            background: rgba(255,255,255,0.30);
+            backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+            border: 1px solid rgba(255,255,255,0.55);
+            box-shadow: inset 0 1px 3px rgba(0,0,0,0.06), 0 1px 0 rgba(255,255,255,0.8);
+            border-radius: 12px; cursor: pointer; transition: all .2s ease;
+            font-family: var(--font); font-size: 14px; color: rgba(15,15,40,.88);
+        }
+        .dp-trigger:hover { background: rgba(255,255,255,0.42); border-color: rgba(255,255,255,0.70); }
+        .dp-trigger.open  {
+            background: rgba(255,255,255,0.48); border-color: rgba(10,132,255,0.50);
+            box-shadow: inset 0 1px 3px rgba(0,0,0,0.04), 0 0 0 3px rgba(10,132,255,0.12), 0 1px 0 rgba(255,255,255,0.9);
+        }
+        .dp-cal-icon { color: rgba(10,132,255,0.65); font-size: 16px; flex-shrink:0; transition: color .2s; }
+        .dp-trigger.open .dp-cal-icon { color: var(--blue); }
+
+        /* Dropdown */
+        .dp-dropdown {
+            position: absolute; top: calc(100% + 8px); left: 0; right: 0;
+            z-index: 210; min-width: 260px;
+            background: rgba(232,238,255,0.58);
+            backdrop-filter: blur(28px) saturate(200%);
+            -webkit-backdrop-filter: blur(28px) saturate(200%);
+            border: 1px solid rgba(255,255,255,0.72);
+            border-radius: 20px;
+            box-shadow:
+                0 28px 70px rgba(40,60,130,0.20),
+                0 10px 28px rgba(40,60,130,0.12),
+                inset 0 1px 0 rgba(255,255,255,0.92),
+                inset 0 -1px 0 rgba(255,255,255,0.28);
+            overflow: hidden;
+            transform-origin: top center;
+            animation: tpOpen .22s cubic-bezier(.22,1,.36,1) both;
+        }
+        .dp-dropdown::before {
+            content:''; position:absolute; top:0; left:0; right:0; height:1px;
+            background: linear-gradient(90deg,transparent,rgba(255,255,255,0.96),transparent);
+            border-radius: 20px 20px 0 0;
+        }
+
+        /* Month nav header */
+        .dp-header {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 14px 16px 10px;
+            border-bottom: 1px solid rgba(255,255,255,0.32);
+        }
+        .dp-nav-btn {
+            width: 28px; height: 28px; border-radius: 8px; cursor: pointer;
+            background: rgba(255,255,255,0.30); border: 1px solid rgba(255,255,255,0.50);
+            display: inline-flex; align-items: center; justify-content: center;
+            color: rgba(30,30,80,.65); font-size: 13px; transition: all .15s;
+        }
+        .dp-nav-btn:hover { background: rgba(255,255,255,0.55); color: var(--blue); }
+        .dp-month-label {
+            font-size: 13px; font-weight: 700; color: rgba(15,15,40,.82);
+            letter-spacing: -.02em; text-transform: capitalize;
+        }
+
+        /* Weekday header row */
+        .dp-wdays {
+            display: grid; grid-template-columns: repeat(7,1fr);
+            padding: 8px 10px 4px;
+        }
+        .dp-wday { text-align:center; font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:rgba(60,60,120,.42); padding:2px 0; }
+
+        /* Day grid */
+        .dp-days { display: grid; grid-template-columns: repeat(7,1fr); padding: 0 10px 10px; gap: 2px; }
+        .dp-day-empty { }
+        .dp-day {
+            text-align: center; padding: 3px 0; border-radius: 8px; cursor: pointer;
+            font-size: 12.5px; font-weight: 400; color: rgba(20,20,60,.78);
+            transition: all .14s ease; border: 1px solid transparent;
+            font-family: var(--font); font-variant-numeric: tabular-nums;
+            line-height: 26px; height: 28px;
+        }
+        .dp-day:hover {
+            background: rgba(255,255,255,0.60);
+            border-color: rgba(255,255,255,0.75);
+            box-shadow: 0 2px 10px rgba(10,132,255,0.10), inset 0 1px 0 rgba(255,255,255,0.80);
+            color: rgba(10,100,220,.90);
+            transform: scale(1.06);
+        }
+        .dp-day.today {
+            border-color: rgba(10,132,255,0.38);
+            color: var(--blue); font-weight: 600;
+            box-shadow: 0 0 0 2px rgba(10,132,255,0.12);
+        }
+        .dp-day.selected {
+            background: linear-gradient(145deg, rgba(10,132,255,0.88), rgba(60,80,230,0.90));
+            border-color: rgba(10,132,255,0.50);
+            color: #fff; font-weight: 700;
+            box-shadow: 0 4px 18px rgba(10,132,255,0.32), inset 0 1px 0 rgba(255,255,255,0.30);
+            transform: scale(1.08);
+        }
+        .dp-day.selected:hover { background: linear-gradient(145deg,rgba(10,132,255,1),rgba(60,80,230,1)); }
+        .dp-day.other-month { color: rgba(60,60,120,.28); }
+
+        /* ══════════════════════════════════════════════════════════
+           GLASS ALERT SYSTEM
+           ══════════════════════════════════════════════════════════ */
+
+        /* Toast container — top-center stack */
+        #glass-toast-root {
+            position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+            z-index: 9999; display: flex; flex-direction: column; align-items: center;
+            gap: 10px; pointer-events: none; min-width: 320px; max-width: 480px;
+        }
+
+        /* Single toast */
+        .g-toast {
+            pointer-events: all;
+            display: flex; align-items: flex-start; gap: 12px;
+            padding: 14px 16px 14px 14px;
+            border-radius: 20px;
+            backdrop-filter: blur(32px) saturate(200%);
+            -webkit-backdrop-filter: blur(32px) saturate(200%);
+            background: rgba(245,248,255,0.55);
+            border: 1px solid rgba(255,255,255,0.72);
+            box-shadow:
+                0 20px 60px rgba(30,50,120,0.18),
+                0 6px 20px rgba(30,50,120,0.10),
+                inset 0 1px 0 rgba(255,255,255,0.92);
+            min-width: 300px; max-width: 440px;
+            position: relative; overflow: hidden;
+            cursor: default;
+        }
+        .g-toast::before {
+            content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.95), transparent);
+        }
+
+        /* Toast type accent bars */
+        .g-toast-error   { border-left: 3px solid rgba(255,69,58,0.75);  box-shadow: 0 20px 60px rgba(255,69,58,0.14), 0 6px 20px rgba(30,50,120,0.08), inset 0 1px 0 rgba(255,255,255,0.90); }
+        .g-toast-success { border-left: 3px solid rgba(48,209,88,0.75);  box-shadow: 0 20px 60px rgba(48,209,88,0.12), 0 6px 20px rgba(30,50,120,0.08), inset 0 1px 0 rgba(255,255,255,0.90); }
+        .g-toast-warning { border-left: 3px solid rgba(255,159,10,0.75); box-shadow: 0 20px 60px rgba(255,159,10,0.13), 0 6px 20px rgba(30,50,120,0.08), inset 0 1px 0 rgba(255,255,255,0.90); }
+        .g-toast-info    { border-left: 3px solid rgba(10,132,255,0.75); box-shadow: 0 20px 60px rgba(10,132,255,0.13), 0 6px 20px rgba(30,50,120,0.08), inset 0 1px 0 rgba(255,255,255,0.90); }
+
+        /* Toast icon glow circles */
+        .g-toast-icon {
+            width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 16px;
+        }
+        .g-toast-error   .g-toast-icon { background: rgba(255,69,58,0.14);  color: #FF453A; box-shadow: 0 0 12px rgba(255,69,58,0.22); }
+        .g-toast-success .g-toast-icon { background: rgba(48,209,88,0.14);  color: #30D158; box-shadow: 0 0 12px rgba(48,209,88,0.22); }
+        .g-toast-warning .g-toast-icon { background: rgba(255,159,10,0.14); color: #FF9F0A; box-shadow: 0 0 12px rgba(255,159,10,0.22); }
+        .g-toast-info    .g-toast-icon { background: rgba(10,132,255,0.14); color: #0A84FF; box-shadow: 0 0 12px rgba(10,132,255,0.22); }
+
+        .g-toast-body { flex: 1; min-width: 0; }
+        .g-toast-title { font-size: 13.5px; font-weight: 700; color: rgba(15,15,40,.88); letter-spacing: -.01em; line-height: 1.3; }
+        .g-toast-msg   { font-size: 12.5px; color: rgba(40,40,90,.65); margin-top: 3px; line-height: 1.45; }
+
+        .g-toast-close {
+            flex-shrink: 0; width: 24px; height: 24px; border-radius: 8px;
+            background: rgba(255,255,255,0.28); border: 1px solid rgba(255,255,255,0.45);
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; color: rgba(60,60,120,.50); font-size: 12px;
+            transition: all .15s; margin-top: 2px;
+        }
+        .g-toast-close:hover { background: rgba(255,255,255,0.50); color: rgba(20,20,60,.80); }
+
+        /* Progress bar */
+        .g-toast-progress {
+            position: absolute; bottom: 0; left: 0; height: 2px;
+            border-radius: 0 0 20px 20px;
+            transition: width linear;
+        }
+        .g-toast-error   .g-toast-progress { background: rgba(255,69,58,0.55); }
+        .g-toast-success .g-toast-progress { background: rgba(48,209,88,0.55); }
+        .g-toast-warning .g-toast-progress { background: rgba(255,159,10,0.55); }
+        .g-toast-info    .g-toast-progress { background: rgba(10,132,255,0.55); }
+
+        /* Toast animations */
+        @keyframes toastIn {
+            from { opacity:0; transform: translateY(-16px) scale(.92); }
+            to   { opacity:1; transform: translateY(0) scale(1); }
+        }
+        @keyframes toastOut {
+            from { opacity:1; transform: translateY(0) scale(1); max-height: 120px; margin-bottom:0; }
+            to   { opacity:0; transform: translateY(-10px) scale(.94); max-height:0; margin-bottom:-10px; }
+        }
+        .g-toast.entering { animation: toastIn .28s cubic-bezier(.22,1,.36,1) both; }
+        .g-toast.leaving  { animation: toastOut .22s cubic-bezier(.4,0,1,1) both; }
+
+        /* Glass Confirm Dialog */
+        .g-confirm-overlay {
+            position: fixed; inset: 0; z-index: 9998;
+            background: rgba(15,20,60,0.30);
+            backdrop-filter: blur(16px) saturate(160%);
+            -webkit-backdrop-filter: blur(16px) saturate(160%);
+            display: flex; align-items: center; justify-content: center; padding: 20px;
+            animation: fadeIn .18s ease both;
+        }
+        .g-confirm-box {
+            background: rgba(240,244,255,0.58);
+            backdrop-filter: blur(36px) saturate(220%);
+            -webkit-backdrop-filter: blur(36px) saturate(220%);
+            border: 1px solid rgba(255,255,255,0.75);
+            border-radius: 24px;
+            box-shadow:
+                0 40px 100px rgba(30,50,120,0.22),
+                0 12px 36px rgba(30,50,120,0.12),
+                inset 0 1px 0 rgba(255,255,255,0.95);
+            padding: 28px; width: 100%; max-width: 380px;
+            position: relative; overflow: hidden;
+            animation: toastIn .26s cubic-bezier(.22,1,.36,1) both;
+        }
+        .g-confirm-box::before {
+            content: ''; position:absolute; top:0; left:0; right:0; height:1px;
+            background: linear-gradient(90deg,transparent,rgba(255,255,255,0.96),transparent);
+        }
+        .g-confirm-icon-wrap {
+            width: 52px; height: 52px; border-radius: 50%; margin: 0 auto 18px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 24px;
+        }
+        .g-confirm-icon-wrap.danger  { background: rgba(255,69,58,0.14); color: #FF453A; box-shadow: 0 0 24px rgba(255,69,58,0.22); }
+        .g-confirm-icon-wrap.warning { background: rgba(255,159,10,0.14); color: #FF9F0A; box-shadow: 0 0 24px rgba(255,159,10,0.22); }
+        .g-confirm-icon-wrap.info    { background: rgba(10,132,255,0.14); color: #0A84FF; box-shadow: 0 0 24px rgba(10,132,255,0.22); }
+        .g-confirm-title { font-size: 17px; font-weight: 700; text-align: center; color: rgba(15,15,40,.88); letter-spacing: -.02em; margin-bottom: 8px; }
+        .g-confirm-msg   { font-size: 13.5px; text-align: center; color: rgba(40,40,90,.62); line-height: 1.55; margin-bottom: 24px; }
+        .g-confirm-btns  { display: flex; gap: 10px; }
+        .g-confirm-cancel {
+            flex: 1; padding: 11px; border-radius: 13px;
+            background: rgba(255,255,255,0.30); border: 1px solid rgba(255,255,255,0.55);
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.70);
+            font-size: 14px; font-weight: 600; color: rgba(40,40,90,.70);
+            cursor: pointer; font-family: var(--font); transition: all .18s;
+        }
+        .g-confirm-cancel:hover { background: rgba(255,255,255,0.50); }
+        .g-confirm-ok {
+            flex: 1; padding: 11px; border-radius: 13px;
+            font-size: 14px; font-weight: 700; color: #fff;
+            cursor: pointer; font-family: var(--font); transition: all .18s;
+        }
+        .g-confirm-ok.danger  { background: linear-gradient(145deg,rgba(255,69,58,0.90),rgba(220,30,20,0.95)); border: 1px solid rgba(255,69,58,0.40); box-shadow: 0 4px 18px rgba(255,69,58,0.30); }
+        .g-confirm-ok.warning { background: linear-gradient(145deg,rgba(255,159,10,0.90),rgba(220,120,0,0.95)); border: 1px solid rgba(255,159,10,0.40); box-shadow: 0 4px 18px rgba(255,159,10,0.30); }
+        .g-confirm-ok.info    { background: linear-gradient(145deg,rgba(10,132,255,0.90),rgba(10,100,240,0.95)); border: 1px solid rgba(10,132,255,0.40); box-shadow: 0 4px 18px rgba(10,132,255,0.30); }
+        .g-confirm-ok:hover { transform: translateY(-1px); filter: brightness(1.08); }
+
+        /* Inline field error bubble */
+        .field-err {
+            display: flex; align-items: center; gap: 5px;
+            margin-top: 5px; padding: 5px 10px;
+            background: rgba(255,69,58,0.10);
+            backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+            border: 1px solid rgba(255,69,58,0.22); border-radius: 9px;
+            font-size: 11.5px; color: rgba(200,30,20,.85);
+            animation: fieldErrIn .18s cubic-bezier(.22,1,.36,1) both;
+        }
+        @keyframes fieldErrIn {
+            from { opacity:0; transform: translateY(-4px) scale(.97); }
+            to   { opacity:1; transform: none; }
+        }
+        .g-input-err {
+            border-color: rgba(255,69,58,0.50) !important;
+            box-shadow: inset 0 1px 3px rgba(0,0,0,0.04), 0 0 0 3px rgba(255,69,58,0.10) !important;
+        }
     </style>
 </head>
 <body>
@@ -404,10 +717,11 @@
     <div class="orb" style="width:280px;height:280px;background:radial-gradient(circle,rgba(255,180,80,0.35),transparent);bottom:22%;right:22%;animation:drift 20s ease-in-out infinite alternate-reverse;opacity:.38;"></div>
 </div>
 
+<div id="glass-toast-root" role="region" aria-live="polite" aria-label="Notifiche"></div>
 <div id="root"></div>
 
 <script type="text/babel">
-const { useState, useEffect, useCallback } = React;
+const { useState, useEffect, useCallback, useRef, useContext, createContext } = React;
 const API_BASE = 'http://localhost:5000/api';
 
 async function fetchAPI(endpoint, options = {}) {
@@ -420,24 +734,198 @@ async function fetchAPI(endpoint, options = {}) {
     return data;
 }
 
-function ErrorBox({ message }) {
+/* ═══════════════════════════════════════════════════════════════
+   GLASS ALERT SYSTEM
+   ═══════════════════════════════════════════════════════════════ */
+
+// ── Toast Context ─────────────────────────────────────────────
+const ToastCtx = createContext(null);
+
+const TOAST_ICONS = {
+    error:   'ph-x-circle',
+    success: 'ph-check-circle',
+    warning: 'ph-warning',
+    info:    'ph-info',
+};
+const TOAST_TITLES = {
+    error:   'Errore',
+    success: 'Completato',
+    warning: 'Attenzione',
+    info:    'Info',
+};
+const TOAST_DURATION = { error: 5500, success: 4000, warning: 5000, info: 4500 };
+
+// ── Single Toast ──────────────────────────────────────────────
+function GlassToast({ id, type, title, message, onRemove }) {
+    const [leaving, setLeaving] = useState(false);
+    const [progress, setProgress] = useState(100);
+    const duration = TOAST_DURATION[type] || 4500;
+    const startRef = useRef(null);
+    const rafRef   = useRef(null);
+
+    const dismiss = useCallback(() => {
+        setLeaving(true);
+        cancelAnimationFrame(rafRef.current);
+        setTimeout(() => onRemove(id), 220);
+    }, [id, onRemove]);
+
+    // Auto-dismiss with progress bar
+    useEffect(() => {
+        startRef.current = performance.now();
+        const tick = (now) => {
+            const elapsed = now - startRef.current;
+            const pct = Math.max(0, 100 - (elapsed / duration) * 100);
+            setProgress(pct);
+            if (pct > 0) rafRef.current = requestAnimationFrame(tick);
+            else dismiss();
+        };
+        rafRef.current = requestAnimationFrame(tick);
+        return () => cancelAnimationFrame(rafRef.current);
+    }, []);
+
+    // ESC key dismiss
+    useEffect(() => {
+        const h = (e) => { if (e.key === 'Escape') dismiss(); };
+        document.addEventListener('keydown', h);
+        return () => document.removeEventListener('keydown', h);
+    }, [dismiss]);
+
+    return (
+        <div
+            className={`g-toast g-toast-${type}${leaving ? ' leaving' : ' entering'}`}
+            role="alert"
+            aria-live={type === 'error' ? 'assertive' : 'polite'}
+        >
+            <div className="g-toast-icon">
+                <i className={`ph ${TOAST_ICONS[type]}`}></i>
+            </div>
+            <div className="g-toast-body">
+                <div className="g-toast-title">{title || TOAST_TITLES[type]}</div>
+                {message && <div className="g-toast-msg">{message}</div>}
+            </div>
+            <button
+                className="g-toast-close"
+                onClick={dismiss}
+                aria-label="Chiudi notifica"
+            >
+                <i className="ph ph-x"></i>
+            </button>
+            <div
+                className="g-toast-progress"
+                style={{ width: `${progress}%` }}
+            ></div>
+        </div>
+    );
+}
+
+// ── Toast Container (renders into #glass-toast-root) ──────────
+function GlassToastContainer({ toasts, removeToast }) {
+    const el = document.getElementById('glass-toast-root');
+    if (!el) return null;
+    return ReactDOM.createPortal(
+        toasts.map(t => (
+            <GlassToast key={t.id} {...t} onRemove={removeToast} />
+        )),
+        el
+    );
+}
+
+// ── Glass Confirm Dialog ──────────────────────────────────────
+function GlassConfirm({ title, message, variant='danger', confirmLabel='Elimina', cancelLabel='Annulla', onConfirm, onCancel }) {
+    // ESC = cancel
+    useEffect(() => {
+        const h = (e) => { if (e.key === 'Escape') onCancel(); };
+        document.addEventListener('keydown', h);
+        return () => document.removeEventListener('keydown', h);
+    }, [onCancel]);
+
+    const iconMap = { danger:'ph-trash', warning:'ph-warning', info:'ph-question' };
+    return (
+        <div className="g-confirm-overlay" onClick={onCancel}>
+            <div className="g-confirm-box" onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="gc-title">
+                <div className={`g-confirm-icon-wrap ${variant}`}>
+                    <i className={`ph ${iconMap[variant]||iconMap.danger}`}></i>
+                </div>
+                <div className="g-confirm-title" id="gc-title">{title}</div>
+                <div className="g-confirm-msg">{message}</div>
+                <div className="g-confirm-btns">
+                    <button className="g-confirm-cancel" onClick={onCancel} autoFocus>{cancelLabel}</button>
+                    <button className={`g-confirm-ok ${variant}`} onClick={onConfirm}>{confirmLabel}</button>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+// ── Inline Field Error ────────────────────────────────────────
+function FieldError({ message }) {
     if (!message) return null;
     return (
-        <div className="box-err fi flex items-start gap-2 mt-3">
-            <i className="ph ph-warning-circle flex-shrink-0 mt-0.5"></i>
+        <div className="field-err" role="alert">
+            <i className="ph ph-warning-circle" style={{fontSize:'12px', flexShrink:0}}></i>
             <span>{message}</span>
         </div>
     );
 }
-function SuccessBox({ message }) {
-    if (!message) return null;
+
+// ── Toast Provider ────────────────────────────────────────────
+function ToastProvider({ children }) {
+    const [toasts,  setToasts]  = useState([]);
+    const [confirm, setConfirm] = useState(null);
+    let nextId = useRef(0);
+
+    const showToast = useCallback(({ type='info', title='', message='' }) => {
+        const id = ++nextId.current;
+        setToasts(prev => [...prev, { id, type, title, message }]);
+        return id;
+    }, []);
+
+    const removeToast = useCallback((id) => {
+        setToasts(prev => prev.filter(t => t.id !== id));
+    }, []);
+
+    // Imperative helpers exposed on context
+    const toast = {
+        error:   (msg, title) => showToast({ type:'error',   title: title||'Errore',      message: msg }),
+        success: (msg, title) => showToast({ type:'success', title: title||'Completato',  message: msg }),
+        warning: (msg, title) => showToast({ type:'warning', title: title||'Attenzione',  message: msg }),
+        info:    (msg, title) => showToast({ type:'info',    title: title||'Info',         message: msg }),
+        confirm: ({ title, message, variant, confirmLabel, cancelLabel }) =>
+            new Promise(resolve => {
+                setConfirm({
+                    title, message,
+                    variant: variant || 'danger',
+                    confirmLabel: confirmLabel || 'Conferma',
+                    cancelLabel:  cancelLabel  || 'Annulla',
+                    resolve,
+                });
+            }),
+    };
+
+    const handleConfirm = () => { confirm?.resolve(true);  setConfirm(null); };
+    const handleCancel  = () => { confirm?.resolve(false); setConfirm(null); };
+
     return (
-        <div className="box-ok fi flex items-start gap-2 mt-3">
-            <i className="ph ph-check-circle flex-shrink-0 mt-0.5"></i>
-            <span>{message}</span>
-        </div>
+        <ToastCtx.Provider value={toast}>
+            {children}
+            <GlassToastContainer toasts={toasts} removeToast={removeToast} />
+            {confirm && (
+                <GlassConfirm
+                    title={confirm.title}
+                    message={confirm.message}
+                    variant={confirm.variant}
+                    confirmLabel={confirm.confirmLabel}
+                    cancelLabel={confirm.cancelLabel}
+                    onConfirm={handleConfirm}
+                    onCancel={handleCancel}
+                />
+            )}
+        </ToastCtx.Provider>
     );
 }
+
+const useToast = () => useContext(ToastCtx);
+
 function RoleBadge({ role }) {
     const cls   = { admin:'ba', capo:'bc', user:'bu' };
     const label = { admin:'Admin', capo:'Capo', user:'Utente' };
@@ -447,42 +935,72 @@ function RoleBadge({ role }) {
 // ── App ───────────────────────────────────────────────────────
 function App() {
     const [auth, setAuth] = useState(null);
-    if (!auth) return <Login onLogin={setAuth} />;
-    return <Dashboard auth={auth} onLogout={() => setAuth(null)} />;
+    return (
+        <ToastProvider>
+            {!auth
+                ? <Login onLogin={setAuth} />
+                : <Dashboard auth={auth} onLogout={() => setAuth(null)} />
+            }
+        </ToastProvider>
+    );
 }
 
 // ── Login ─────────────────────────────────────────────────────
 function Login({ onLogin }) {
+    const toast = useToast();
     const [isLogin,  setIsLogin]  = useState(true);
     const [username, setUsername] = useState('');
     const [email,    setEmail]    = useState('');
     const [password, setPassword] = useState('');
     const [loading,  setLoading]  = useState(false);
-    const [error,    setError]    = useState('');
+    const [touched,  setTouched]  = useState({});
     const [success,  setSuccess]  = useState('');
 
-    const reset = () => { setError(''); setSuccess(''); setUsername(''); setEmail(''); setPassword(''); };
+    const reset = () => { setTouched({}); setSuccess(''); setUsername(''); setEmail(''); setPassword(''); };
     const switchMode = () => { setIsLogin(!isLogin); reset(); };
+    const touch = (f) => setTouched(p => ({ ...p, [f]: true }));
+
+    // Field errors (only after touched)
+    const errs = {};
+    if (!isLogin && touched.username && !username.trim()) errs.username = 'Username obbligatorio';
+    if (touched.email && !email.trim())                   errs.email    = 'Email obbligatoria';
+    if (touched.email && email && !/\S+@\S+\.\S+/.test(email)) errs.email = 'Formato email non valido';
+    if (touched.password && !password)                    errs.password = 'Password obbligatoria';
+    if (touched.password && !isLogin && password.length < 6) errs.password = 'Minimo 6 caratteri';
 
     const handleSubmit = async (e) => {
-        e.preventDefault(); setError(''); setSuccess(''); setLoading(true);
+        e.preventDefault();
+        // Touch all fields to show errors
+        const allTouched = { email:true, password:true };
+        if (!isLogin) allTouched.username = true;
+        setTouched(allTouched);
+        if (Object.keys(errs).length > 0) {
+            toast.error('Compila tutti i campi obbligatori.', 'Campi mancanti');
+            return;
+        }
+        setLoading(true);
         try {
             if (isLogin) {
                 const d = await fetchAPI('/auth/login', { method:'POST', body:JSON.stringify({ email, password }) });
                 onLogin({ username:d.username, token:d.token, role:d.role });
             } else {
                 await fetchAPI('/auth/register', { method:'POST', body:JSON.stringify({ username, email, password }) });
-                setSuccess('Registrazione completata! Ora puoi accedere.');
-                setIsLogin(true); setUsername(''); setPassword('');
+                toast.success('Ora puoi accedere con le tue credenziali.', 'Registrazione completata!');
+                setIsLogin(true); setUsername(''); setPassword(''); setTouched({});
             }
-        } catch(err) { setError(err.message || 'Errore di connessione.'); }
+        } catch(err) {
+            const msg = err.message || 'Errore di connessione.';
+            if (msg.toLowerCase().includes('email')) toast.error('Questo indirizzo email è già registrato.', 'Email già in uso');
+            else if (msg.toLowerCase().includes('username')) toast.error('Questo username è già in uso.', 'Username non disponibile');
+            else if (msg.toLowerCase().includes('credenziali') || msg.toLowerCase().includes('password')) toast.error('Email o password non corretti.', 'Accesso negato');
+            else toast.error(msg, 'Errore');
+        }
         finally { setLoading(false); }
     };
 
     return (
         <div className="min-h-screen flex items-center justify-center p-4">
             <div className="glass-xl rounded-3xl p-10 w-full max-w-md fu" style={{borderRadius:'28px'}}>
-                {/* Logo */}
                 <div className="flex flex-col items-center mb-8">
                     <div className="glass rounded-2xl p-4 mb-4" style={{boxShadow:'0 8px 32px rgba(10,132,255,0.22), inset 0 1px 0 rgba(255,255,255,0.80)'}}>
                         <i className="ph ph-calendar-check" style={{fontSize:'36px', color:'var(--blue)'}}></i>
@@ -493,26 +1011,36 @@ function Login({ onLogin }) {
                     <p className="ts text-sm mt-1">{isLogin ? 'Accedi ai tuoi calendari' : 'Inizia a organizzare la tua agenda'}</p>
                 </div>
 
-                <form onSubmit={handleSubmit} style={{display:'flex',flexDirection:'column',gap:'12px'}}>
+                <form onSubmit={handleSubmit} noValidate style={{display:'flex',flexDirection:'column',gap:'12px'}}>
                     {!isLogin && (
                         <div>
-                            <label className="slabel block mb-1.5">Username</label>
-                            <input type="text" required value={username} onChange={e=>setUsername(e.target.value)}
-                                className="g-input" placeholder="mario_rossi" />
+                            <label className="slabel block mb-1.5">Username <span style={{color:'var(--red)',opacity:.7}}>*</span></label>
+                            <input type="text" value={username}
+                                onChange={e=>setUsername(e.target.value)}
+                                onBlur={()=>touch('username')}
+                                className={`g-input${errs.username?' g-input-err':''}`}
+                                placeholder="mario_rossi" aria-required="true" aria-describedby="err-username" />
+                            <FieldError message={errs.username} />
                         </div>
                     )}
                     <div>
-                        <label className="slabel block mb-1.5">Email</label>
-                        <input type="email" required value={email} onChange={e=>setEmail(e.target.value)}
-                            className="g-input" placeholder="mario@esempio.it" />
+                        <label className="slabel block mb-1.5">Email <span style={{color:'var(--red)',opacity:.7}}>*</span></label>
+                        <input type="email" value={email}
+                            onChange={e=>setEmail(e.target.value)}
+                            onBlur={()=>touch('email')}
+                            className={`g-input${errs.email?' g-input-err':''}`}
+                            placeholder="mario@esempio.it" aria-required="true" />
+                        <FieldError message={errs.email} />
                     </div>
                     <div>
-                        <label className="slabel block mb-1.5">Password</label>
-                        <input type="password" required value={password} onChange={e=>setPassword(e.target.value)}
-                            className="g-input" placeholder="••••••••" />
+                        <label className="slabel block mb-1.5">Password <span style={{color:'var(--red)',opacity:.7}}>*</span></label>
+                        <input type="password" value={password}
+                            onChange={e=>setPassword(e.target.value)}
+                            onBlur={()=>touch('password')}
+                            className={`g-input${errs.password?' g-input-err':''}`}
+                            placeholder="••••••••" aria-required="true" />
+                        <FieldError message={errs.password} />
                     </div>
-                    <ErrorBox message={error} />
-                    <SuccessBox message={success} />
                     <button type="submit" disabled={loading} className="btn-p w-full mt-1" style={{padding:'12px'}}>
                         {loading ? 'Caricamento…' : (isLogin ? 'Accedi' : 'Registrati')}
                     </button>
@@ -531,21 +1059,33 @@ function Login({ onLogin }) {
 
 // ── Change Password Modal ─────────────────────────────────────
 function ChangePasswordModal({ token, onClose }) {
-    const [oldPwd,   setOldPwd]   = useState('');
-    const [newPwd,   setNewPwd]   = useState('');
-    const [confirm,  setConfirm]  = useState('');
-    const [loading,  setLoading]  = useState(false);
-    const [error,    setError]    = useState('');
-    const [success,  setSuccess]  = useState('');
+    const toast = useToast();
+    const [oldPwd,  setOldPwd]  = useState('');
+    const [newPwd,  setNewPwd]  = useState('');
+    const [confirm, setConfirm] = useState('');
+    const [loading, setLoading] = useState(false);
+    const [touched, setTouched] = useState({});
+    const touch = (f) => setTouched(p => ({ ...p, [f]: true }));
+
+    const errs = {};
+    if (touched.oldPwd  && !oldPwd)                       errs.oldPwd  = 'Inserisci la password attuale';
+    if (touched.newPwd  && !newPwd)                       errs.newPwd  = 'Inserisci la nuova password';
+    if (touched.newPwd  && newPwd && newPwd.length < 6)   errs.newPwd  = 'Minimo 6 caratteri';
+    if (touched.confirm && !confirm)                      errs.confirm = 'Conferma la nuova password';
+    if (touched.confirm && confirm && newPwd !== confirm) errs.confirm = 'Le password non coincidono';
 
     const handleSubmit = async (e) => {
-        e.preventDefault(); setError(''); setSuccess('');
-        if (newPwd !== confirm) { setError('Le password non coincidono.'); return; }
+        e.preventDefault();
+        setTouched({ oldPwd:true, newPwd:true, confirm:true });
+        if (newPwd !== confirm) { toast.error('Le password non coincidono.', 'Errore conferma'); return; }
+        if (!oldPwd || !newPwd || !confirm) { toast.error('Compila tutti i campi.', 'Campi mancanti'); return; }
         setLoading(true);
         try {
             const d = await fetchAPI('/auth/change-password', { method:'PUT', body:JSON.stringify({ oldPassword:oldPwd, newPassword:newPwd }), headers:{ 'Authorization':`Bearer ${token}` } });
-            setSuccess(d.message); setOldPwd(''); setNewPwd(''); setConfirm('');
-        } catch(err) { setError(err.message); }
+            toast.success(d.message || 'Password aggiornata con successo.', 'Password cambiata');
+            setOldPwd(''); setNewPwd(''); setConfirm(''); setTouched({});
+            setTimeout(onClose, 1200);
+        } catch(err) { toast.error(err.message, 'Errore'); }
         finally { setLoading(false); }
     };
 
@@ -557,25 +1097,148 @@ function ChangePasswordModal({ token, onClose }) {
                         <div className="glass rounded-xl p-2.5"><i className="ph ph-lock-key" style={{fontSize:'20px',color:'var(--violet)'}}></i></div>
                         <span className="font-semibold tp" style={{fontSize:'16px'}}>Cambia Password</span>
                     </div>
-                    <button onClick={onClose} className="glass rounded-xl p-2 ts hover:tp" style={{border:'none',cursor:'pointer',backdropFilter:'blur(8px)',WebkitBackdropFilter:'blur(8px)',background:'rgba(255,255,255,0.22)',transition:'all .18s'}}>
-                        <i className="ph ph-x" style={{fontSize:'16px'}}></i>
+                    <button onClick={onClose} style={{padding:'7px',background:'rgba(255,255,255,0.30)',backdropFilter:'blur(8px)',WebkitBackdropFilter:'blur(8px)',border:'1px solid rgba(255,255,255,0.55)',borderRadius:'11px',cursor:'pointer',transition:'all .18s',color:'rgba(60,60,120,.55)',display:'flex',alignItems:'center',justifyContent:'center'}}>
+                        <i className="ph ph-x" style={{fontSize:'15px'}}></i>
                     </button>
                 </div>
-                <form onSubmit={handleSubmit} style={{display:'flex',flexDirection:'column',gap:'12px'}}>
-                    {[['Password Attuale',oldPwd,setOldPwd],['Nuova Password',newPwd,setNewPwd],['Conferma Password',confirm,setConfirm]].map(([label,val,setter])=>(
-                        <div key={label}>
-                            <label className="slabel block mb-1.5">{label}</label>
-                            <input type="password" required value={val} onChange={e=>setter(e.target.value)} className="g-input" placeholder="••••••••" />
+                <form onSubmit={handleSubmit} noValidate style={{display:'flex',flexDirection:'column',gap:'12px'}}>
+                    {[
+                        ['oldPwd',  'Password Attuale', oldPwd,  setOldPwd],
+                        ['newPwd',  'Nuova Password',   newPwd,  setNewPwd],
+                        ['confirm', 'Conferma Password',confirm, setConfirm],
+                    ].map(([key, label, val, setter]) => (
+                        <div key={key}>
+                            <label className="slabel block mb-1.5">{label} <span style={{color:'var(--red)',opacity:.7}}>*</span></label>
+                            <input type="password" value={val}
+                                onChange={e=>setter(e.target.value)}
+                                onBlur={()=>touch(key)}
+                                className={`g-input${errs[key]?' g-input-err':''}`}
+                                placeholder="••••••••" aria-required="true" />
+                            <FieldError message={errs[key]} />
                         </div>
                     ))}
-                    <ErrorBox message={error} />
-                    <SuccessBox message={success} />
                     <div className="flex justify-end gap-3 pt-1">
                         <button type="button" onClick={onClose} className="btn-g">Chiudi</button>
                         <button type="submit" disabled={loading} className="btn-p">{loading ? 'Salvataggio…' : 'Aggiorna'}</button>
                     </div>
                 </form>
             </div>
+        </div>
+    );
+}
+
+// ── Liquid Glass Date Picker ──────────────────────────────────
+function DatePickerField({ label, value, onChange, required }) {
+    const { useState: us, useEffect: ue, useRef: ur } = React;
+    const [open,      setOpen]   = us(false);
+    // value is 'YYYY-MM-DD' or ''
+    const parseVal = (v) => { if (!v) return null; const [y,m,d]=v.split('-').map(Number); return {year:y,month:m-1,day:d}; };
+    const sel = parseVal(value);
+    const today = new Date();
+    const todayStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+
+    const [viewYear,  setViewYear]  = us(sel?.year  || today.getFullYear());
+    const [viewMonth, setViewMonth] = us(sel?.month ?? today.getMonth());
+    const ref = ur(null);
+
+    // Close on outside click
+    ue(() => {
+        if (!open) return;
+        const h = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+        document.addEventListener('mousedown', h);
+        return () => document.removeEventListener('mousedown', h);
+    }, [open]);
+
+    // Sync view to selected value when it changes externally
+    ue(() => {
+        if (sel) { setViewYear(sel.year); setViewMonth(sel.month); }
+    }, [value]);
+
+    const prevMonth = () => { if(viewMonth===0){setViewMonth(11);setViewYear(y=>y-1);}else setViewMonth(m=>m-1); };
+    const nextMonth = () => { if(viewMonth===11){setViewMonth(0);setViewYear(y=>y+1);}else setViewMonth(m=>m+1); };
+
+    const selectDay = (y, m, d) => {
+        const ds = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+        onChange(ds); setOpen(false);
+    };
+
+    // Build calendar grid
+    const buildGrid = () => {
+        const firstDay = new Date(viewYear, viewMonth, 1).getDay(); // 0=Sun
+        const offset   = firstDay === 0 ? 6 : firstDay - 1;        // Mon-based
+        const daysInM  = new Date(viewYear, viewMonth+1, 0).getDate();
+        const prevDays = new Date(viewYear, viewMonth, 0).getDate();
+        const cells    = [];
+        // prev month tail
+        for (let i=0;i<offset;i++) {
+            const d = prevDays - offset + 1 + i;
+            const pm = viewMonth===0 ? 11 : viewMonth-1;
+            const py = viewMonth===0 ? viewYear-1 : viewYear;
+            cells.push({ day:d, month:pm, year:py, type:'other' });
+        }
+        // current month
+        for (let d=1;d<=daysInM;d++) cells.push({ day:d, month:viewMonth, year:viewYear, type:'current' });
+        // next month fill to complete last row
+        const remaining = (7 - cells.length % 7) % 7;
+        const nm = viewMonth===11?0:viewMonth+1, ny = viewMonth===11?viewYear+1:viewYear;
+        for (let d=1;d<=remaining;d++) cells.push({ day:d, month:nm, year:ny, type:'other' });
+        return cells;
+    };
+
+    const displayValue = value ? new Date(value+'T12:00:00').toLocaleDateString('it-IT',{day:'2-digit',month:'long',year:'numeric'}) : null;
+    const monthLabel   = new Date(viewYear, viewMonth, 1).toLocaleDateString('it-IT',{month:'long',year:'numeric'});
+
+    return (
+        <div className="dp-field" ref={ref}>
+            {label && <label className="slabel block mb-1.5">{label}{required?' *':''}</label>}
+            <div className={`dp-trigger${open?' open':''}`} onClick={()=>setOpen(o=>!o)}>
+                <span style={displayValue?{}:{color:'rgba(60,60,120,0.38)'}}>
+                    {displayValue || 'Seleziona data'}
+                </span>
+                <i className="ph ph-calendar dp-cal-icon"></i>
+            </div>
+
+            {open && (
+                <div className="dp-dropdown">
+                    {/* Month nav */}
+                    <div className="dp-header">
+                        <button className="dp-nav-btn" onClick={e=>{e.stopPropagation();prevMonth();}}>
+                            <i className="ph ph-caret-left"></i>
+                        </button>
+                        <span className="dp-month-label">{monthLabel}</span>
+                        <button className="dp-nav-btn" onClick={e=>{e.stopPropagation();nextMonth();}}>
+                            <i className="ph ph-caret-right"></i>
+                        </button>
+                    </div>
+
+                    {/* Weekday labels */}
+                    <div className="dp-wdays">
+                        {['L','M','M','G','V','S','D'].map((d,i)=>(
+                            <div key={i} className="dp-wday">{d}</div>
+                        ))}
+                    </div>
+
+                    {/* Day cells */}
+                    <div className="dp-days">
+                        {buildGrid().map((cell,i)=>{
+                            const ds=`${cell.year}-${String(cell.month+1).padStart(2,'0')}-${String(cell.day).padStart(2,'0')}`;
+                            const isToday    = ds===todayStr;
+                            const isSelected = ds===value;
+                            const isOther    = cell.type==='other';
+                            let cls = 'dp-day';
+                            if (isOther)    cls += ' other-month';
+                            if (isToday && !isSelected) cls += ' today';
+                            if (isSelected) cls += ' selected';
+                            return (
+                                <div key={i} className={cls}
+                                    onClick={e=>{e.stopPropagation();selectDay(cell.year,cell.month,cell.day);}}>
+                                    {cell.day}
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
@@ -710,15 +1373,25 @@ function TimePickerField({ label, value, onChange, invalid, onFocus }) {
 
 // ── Event Modal ───────────────────────────────────────────────
 function EventModal({ token, activeCalId, activeCalIsGlobal, userRole, selectedDate, editEvent, onClose, onSaved }) {
+    const toast  = useToast();
     const isEdit = !!editEvent;
     const [loading,     setLoading]  = useState(false);
-    const [error,       setError]    = useState('');
-    const [timeError,   setTimeError]= useState(false);
     const [title,       setTitle]    = useState(editEvent?.title || '');
     const [date,        setDate]     = useState(editEvent?.event_date?.substring(0,10) || selectedDate);
     const [time,        setTime]     = useState(editEvent?.event_time?.substring(0,5) || '');
     const [endTime,     setEndTime]  = useState(editEvent?.event_end_time?.substring(0,5) || '');
     const [description, setDesc]     = useState(editEvent?.description || '');
+    const [touched,     setTouched]  = useState({});
+    const touch = (f) => setTouched(p => ({ ...p, [f]: true }));
+
+    // Field-level errors (only after touch)
+    const errs = {};
+    if (touched.title   && !title.trim())  errs.title   = 'Il titolo è obbligatorio';
+    if (touched.date    && !date)          errs.date    = 'Seleziona una data';
+    if (touched.time    && !time)          errs.time    = 'Seleziona l\'ora di inizio';
+    if (touched.endTime && !endTime)       errs.endTime = 'Seleziona l\'ora di fine';
+    if (touched.time && touched.endTime && time && endTime && time >= endTime)
+        errs.endTime = 'L\'ora di fine deve essere successiva all\'inizio';
 
     if (activeCalIsGlobal && !['capo','admin'].includes(userRole)) {
         return (
@@ -735,19 +1408,26 @@ function EventModal({ token, activeCalId, activeCalIsGlobal, userRole, selectedD
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        setError('');
-        // Time validation
-        if (!time || !endTime) { setTimeError(true); return; }
-        setTimeError(false);
+        setTouched({ title:true, date:true, time:true, endTime:true });
+
+        // Validate all fields
+        if (!title.trim()) { toast.error('Il titolo dell\'evento è obbligatorio.', 'Campo mancante'); return; }
+        if (!date)         { toast.error('Seleziona una data per l\'evento.', 'Data mancante'); return; }
+        if (!time)         { toast.error('Seleziona l\'ora di inizio.', 'Ora mancante'); return; }
+        if (!endTime)      { toast.error('Seleziona l\'ora di fine.', 'Ora mancante'); return; }
+        if (time >= endTime) { toast.error('L\'ora di fine deve essere successiva all\'ora di inizio.', 'Orario non valido'); return; }
+
         setLoading(true);
         try {
             if (isEdit) {
                 await fetchAPI(`/events/${editEvent.id}`, { method:'PUT', body:JSON.stringify({ title, event_date:date, event_time:time, event_end_time:endTime, description }), headers:{ 'Authorization':`Bearer ${token}` } });
+                toast.success(`"${title}" aggiornato con successo.`, 'Evento modificato');
             } else {
                 await fetchAPI('/events', { method:'POST', body:JSON.stringify({ calendar_id:activeCalId, title, event_date:date, event_time:time, event_end_time:endTime, description }), headers:{ 'Authorization':`Bearer ${token}` } });
+                toast.success(`"${title}" è stato aggiunto al calendario.`, 'Evento creato');
             }
             onSaved(); onClose();
-        } catch(err) { setError(err.message); }
+        } catch(err) { toast.error(err.message, 'Errore salvataggio'); }
         finally { setLoading(false); }
     };
 
@@ -774,46 +1454,51 @@ function EventModal({ token, activeCalId, activeCalIsGlobal, userRole, selectedD
                     </button>
                 </div>
 
-                <form onSubmit={handleSubmit} style={{display:'flex',flexDirection:'column',gap:'14px'}}>
+                <form onSubmit={handleSubmit} noValidate style={{display:'flex',flexDirection:'column',gap:'14px'}}>
                     {/* Title */}
                     <div>
-                        <label className="slabel block mb-1.5">Titolo *</label>
-                        <input required value={title} onChange={e=>setTitle(e.target.value)} className="g-input" placeholder="Titolo evento" />
+                        <label className="slabel block mb-1.5">Titolo <span style={{color:'var(--red)',opacity:.7}}>*</span></label>
+                        <input value={title}
+                            onChange={e=>{ setTitle(e.target.value); touch('title'); }}
+                            onBlur={()=>touch('title')}
+                            className={`g-input${errs.title?' g-input-err':''}`}
+                            placeholder="Titolo evento" aria-required="true" />
+                        <FieldError message={errs.title} />
                     </div>
 
                     {/* Date */}
-                    <div>
-                        <label className="slabel block mb-1.5">Data *</label>
-                        <input type="date" required value={date} onChange={e=>setDate(e.target.value)} className="g-input" />
+                    <div style={{position:'relative',zIndex:150}}>
+                        <DatePickerField
+                            label="Data"
+                            value={date}
+                            onChange={v=>{ setDate(v); touch('date'); }}
+                            required={true}
+                            invalid={!!errs.date}
+                        />
+                        <FieldError message={errs.date} />
                     </div>
 
                     {/* Time pickers */}
                     <div style={{display:'flex',gap:'12px',alignItems:'flex-start'}}>
-                        <div style={{flex:1,position:'relative',zIndex:timeError&&!time?110:100}}>
+                        <div style={{flex:1,position:'relative',zIndex:100}}>
                             <TimePickerField
                                 label="Ora inizio"
                                 value={time}
-                                onChange={v=>{setTime(v);setTimeError(false);}}
-                                invalid={timeError}
+                                onChange={v=>{ setTime(v); touch('time'); }}
+                                invalid={!!errs.time}
                             />
+                            <FieldError message={errs.time} />
                         </div>
-                        <div style={{flex:1,position:'relative',zIndex:timeError&&!endTime?110:99}}>
+                        <div style={{flex:1,position:'relative',zIndex:99}}>
                             <TimePickerField
                                 label="Ora fine"
                                 value={endTime}
-                                onChange={v=>{setEndTime(v);setTimeError(false);}}
-                                invalid={timeError}
+                                onChange={v=>{ setEndTime(v); touch('endTime'); }}
+                                invalid={!!errs.endTime}
                             />
+                            <FieldError message={errs.endTime} />
                         </div>
                     </div>
-
-                    {/* Global time validation message */}
-                    {timeError && (!time || !endTime) && (
-                        <div style={{display:'flex',alignItems:'center',gap:'6px',background:'rgba(255,69,58,0.09)',border:'1px solid rgba(255,69,58,0.22)',borderRadius:'10px',padding:'8px 12px',fontSize:'12.5px',color:'rgba(190,30,20,.80)',marginTop:'-6px'}}>
-                            <i className="ph ph-warning" style={{fontSize:'14px',flexShrink:0}}></i>
-                            Ora di inizio e fine sono obbligatorie per salvare l'evento.
-                        </div>
-                    )}
 
                     {/* Description */}
                     <div>
@@ -821,8 +1506,6 @@ function EventModal({ token, activeCalId, activeCalIsGlobal, userRole, selectedD
                         <textarea rows="3" value={description} onChange={e=>setDesc(e.target.value)}
                             className="g-input" placeholder="Note aggiuntive…" style={{resize:'none'}}></textarea>
                     </div>
-
-                    <ErrorBox message={error} />
 
                     {/* Actions */}
                     <div style={{display:'flex',justifyContent:'flex-end',gap:'10px',paddingTop:'4px'}}>
@@ -839,27 +1522,26 @@ function EventModal({ token, activeCalId, activeCalIsGlobal, userRole, selectedD
 
 // ── Admin Panel ───────────────────────────────────────────────
 function AdminPanel({ token, onClose }) {
+    const toast = useToast();
     const [users,   setUsers]   = useState([]);
     const [loading, setLoading] = useState(true);
-    const [error,   setError]   = useState('');
-    const [success, setSuccess] = useState('');
     const [changing,setChanging]= useState(null);
 
     const loadUsers = async () => {
-        setLoading(true); setError('');
+        setLoading(true);
         try { const d = await fetchAPI('/admin/users', { headers:{ 'Authorization':`Bearer ${token}` } }); setUsers(d); }
-        catch(err) { setError(err.message); }
+        catch(err) { toast.error(err.message, 'Errore caricamento utenti'); }
         finally { setLoading(false); }
     };
     useEffect(() => { loadUsers(); }, []);
 
-    const changeRole = async (userId, newRole) => {
-        setChanging(userId); setError(''); setSuccess('');
+    const changeRole = async (userId, newRole, username) => {
+        setChanging(userId);
         try {
             const d = await fetchAPI(`/admin/users/${userId}/role`, { method:'PUT', body:JSON.stringify({ role:newRole }), headers:{ 'Authorization':`Bearer ${token}` } });
-            setSuccess(d.message);
+            toast.success(`${username} è ora ${newRole === 'capo' ? 'Capo' : 'Utente'}.`, 'Ruolo aggiornato');
             setUsers(prev => prev.map(u => u.id === userId ? { ...u, role:newRole } : u));
-        } catch(err) { setError(err.message); }
+        } catch(err) { toast.error(err.message, 'Errore'); }
         finally { setChanging(null); }
     };
 
@@ -871,15 +1553,13 @@ function AdminPanel({ token, onClose }) {
                         <div className="glass rounded-xl p-2.5"><i className="ph ph-shield-star" style={{fontSize:'20px',color:'var(--violet)'}}></i></div>
                         <span className="font-semibold tp" style={{fontSize:'16px'}}>Pannello Admin — Gestione Utenti</span>
                     </div>
-                    <button onClick={onClose} className="glass rounded-xl p-2" style={{border:'none',cursor:'pointer',backdropFilter:'blur(8px)',WebkitBackdropFilter:'blur(8px)',background:'rgba(255,255,255,0.22)',transition:'all .18s'}}>
-                        <i className="ph ph-x ts" style={{fontSize:'16px'}}></i>
+                    <button onClick={onClose} style={{padding:'7px',background:'rgba(255,255,255,0.30)',backdropFilter:'blur(8px)',WebkitBackdropFilter:'blur(8px)',border:'1px solid rgba(255,255,255,0.55)',borderRadius:'11px',cursor:'pointer',transition:'all .18s',color:'rgba(60,60,120,.55)',display:'flex',alignItems:'center',justifyContent:'center'}}>
+                        <i className="ph ph-x" style={{fontSize:'15px'}}></i>
                     </button>
                 </div>
                 <div style={{padding:'24px',overflowY:'auto',flex:1}}>
-                    <ErrorBox message={error} />
-                    <SuccessBox message={success} />
                     {loading ? (
-                        <div className="text-center py-10 tm">Caricamento utenti…</div>
+                        <div style={{textAlign:'center',padding:'40px 0',color:'rgba(60,60,120,.42)',fontSize:'13px'}}>Caricamento utenti…</div>
                     ) : (
                         <table className="atable w-full" style={{borderCollapse:'collapse'}}>
                             <thead>
@@ -901,11 +1581,11 @@ function AdminPanel({ token, onClose }) {
                                                 <span className="tm text-xs italic">Non modificabile</span>
                                             ) : (
                                                 <div style={{display:'flex',gap:'8px'}}>
-                                                    <button disabled={u.role==='user'||changing===u.id} onClick={()=>changeRole(u.id,'user')}
+                                                    <button disabled={u.role==='user'||changing===u.id} onClick={()=>changeRole(u.id,'user',u.username)}
                                                         className="glass" style={{padding:'4px 12px',borderRadius:'8px',fontSize:'12px',cursor:'pointer',fontFamily:'var(--font)',color:'rgba(30,30,80,.75)',border:'1px solid rgba(255,255,255,0.45)',transition:'all .18s',opacity:u.role==='user'||changing===u.id?.5:1}}>
                                                         → Utente
                                                     </button>
-                                                    <button disabled={u.role==='capo'||changing===u.id} onClick={()=>changeRole(u.id,'capo')}
+                                                    <button disabled={u.role==='capo'||changing===u.id} onClick={()=>changeRole(u.id,'capo',u.username)}
                                                         style={{padding:'4px 12px',borderRadius:'8px',fontSize:'12px',cursor:'pointer',fontFamily:'var(--font)',background:'rgba(255,159,10,0.15)',border:'1px solid rgba(255,159,10,0.30)',color:'rgba(140,70,0,.90)',transition:'all .18s',opacity:u.role==='capo'||changing===u.id?.5:1}}>
                                                         → Capo
                                                     </button>
@@ -1042,6 +1722,7 @@ function UpcomingPanel({ events, userRole, onEditEvent, onDeleteEvent }) {
 // ── Dashboard ─────────────────────────────────────────────────
 function Dashboard({ auth, onLogout }) {
     const { username, token, role } = auth;
+    const toast = useToast();
     const authHeaders = { 'Authorization':`Bearer ${token}` };
 
     const [calendars,    setCalendars]    = useState([]);
@@ -1056,6 +1737,7 @@ function Dashboard({ auth, onLogout }) {
     const [showChangePassword,  setShowChangePassword]  = useState(false);
     const [showAdminPanel,      setShowAdminPanel]      = useState(false);
     const [selectedDate,        setSelectedDate]        = useState('');
+    const [navDir,              setNavDir]              = useState('right'); // 'left'|'right' for slide animation
 
     const activeCalendar = calendars.find(c => c.id === activeCalId);
     const canEdit = activeCalendar?.is_global ? ['capo','admin'].includes(role) : true;
@@ -1116,10 +1798,11 @@ function Dashboard({ auth, onLogout }) {
             days.push(
                 <div key={d} className={`cal-cell ${isToday?'cal-today':''}`}
                     onClick={()=>{ setSelectedDate(dateStr); setEditEvent(null); setShowNewEvent(true); }}>
-                    <div style={{marginBottom:'5px'}}>
+                    {/* Day number — click navigates to Day View */}
+                    <div style={{marginBottom:'5px'}} onClick={e=>{ e.stopPropagation(); setCurrentDate(new Date(dateStr+'T12:00:00')); setView('Giorno'); setNavDir('right'); }}>
                         {isToday
-                            ? <span className="day-num-today">{d}</span>
-                            : <span style={{fontSize:'11px',fontWeight:600,color:'rgba(40,40,90,.60)'}}>{d}</span>}
+                            ? <span className="day-num-today" style={{cursor:'pointer'}} title="Vai alla vista giornaliera">{d}</span>
+                            : <span className="day-num-btn" title="Vai alla vista giornaliera">{d}</span>}
                     </div>
                     <div style={{display:'flex',flexDirection:'column',gap:'2px'}}>
                         {dayEvents.slice(0,3).map(ev=>{
@@ -1140,7 +1823,7 @@ function Dashboard({ auth, onLogout }) {
         }
 
         return (
-            <div className="fu">
+            <div className={navDir==='right'?'slide-in-right':'slide-in-left'}>
                 {/* Day headers */}
                 <div style={{display:'grid',gridTemplateColumns:'repeat(7,1fr)',gap:'4px',marginBottom:'4px'}}>
                     {['Lun','Mar','Mer','Gio','Ven','Sab','Dom'].map(d=>(
@@ -1163,62 +1846,7 @@ function Dashboard({ auth, onLogout }) {
         );
     };
 
-    // ── renderGiorno ─────────────────────────────────────────
-    const renderGiorno = () => {
-        const dateStr=currentDate.toISOString().split('T')[0];
-        const dayEvents=events.filter(e=>e.event_date&&e.event_date.startsWith(dateStr));
-        const ovIds=getOverlapIds(dayEvents);
-        return (
-            <div className="glass-lg fu" style={{borderRadius:'20px',padding:'24px',minHeight:'400px'}}>
-                <h3 style={{fontSize:'16px',fontWeight:600,color:'rgba(15,15,40,.80)',marginBottom:'16px',paddingBottom:'14px',borderBottom:'1px solid rgba(255,255,255,0.35)',textTransform:'capitalize'}}>
-                    {currentDate.toLocaleDateString('it-IT',{weekday:'long',year:'numeric',month:'long',day:'numeric'})}
-                </h3>
-                {dayEvents.length===0 ? (
-                    <div style={{textAlign:'center',padding:'48px 0',color:'rgba(60,60,120,.38)'}}>
-                        <i className="ph ph-coffee" style={{fontSize:'32px',display:'block',marginBottom:'10px'}}></i>
-                        <p style={{fontSize:'13px',fontStyle:'italic'}}>Nessun evento per questa giornata</p>
-                    </div>
-                ) : (
-                    <div style={{display:'flex',flexDirection:'column',gap:'8px'}}>
-                        {dayEvents.map(ev=>{
-                            const k=`${ev.id}-${ev.source}`;
-                            const isOvlp=ovIds.has(k);
-                            const isOffice=ev.source==='office';
-                            const startT=ev.start_time||ev.event_time;
-                            const endT=ev.end_time||ev.event_end_time;
-                            const barColor=isOvlp?'var(--red)':isOffice?'var(--amber)':'var(--blue)';
-                            return (
-                                <div key={k} className="drow" style={{display:'flex',gap:'12px',alignItems:'flex-start',borderLeft:`3px solid ${barColor}`}}>
-                                    <div style={{width:'70px',flexShrink:0,fontSize:'12px',fontWeight:600,color:barColor,lineHeight:1.4}}>
-                                        {startT?`${startT.substring(0,5)}${endT?'–'+endT.substring(0,5):''}` : 'Tutto il giorno'}
-                                    </div>
-                                    <div style={{flex:1}}>
-                                        <div style={{display:'flex',alignItems:'center',gap:'8px',flexWrap:'wrap'}}>
-                                            <span style={{fontSize:'14px',fontWeight:600,color:'rgba(15,15,40,.85)'}}>{ev.title}</span>
-                                            {isOffice&&<span style={{fontSize:'10px',fontWeight:600,background:'rgba(255,159,10,0.14)',border:'1px solid rgba(255,159,10,0.25)',color:'rgba(140,70,0,.85)',padding:'1px 7px',borderRadius:'5px'}}>Ufficio</span>}
-                                            {isOvlp&&<span style={{fontSize:'10px',background:'rgba(255,69,58,0.12)',border:'1px solid rgba(255,69,58,0.25)',color:'var(--red)',padding:'1px 7px',borderRadius:'5px'}}>⚠ Sovrapposizione</span>}
-                                        </div>
-                                        {ev.description&&<p style={{fontSize:'12px',color:'rgba(60,60,120,.50)',marginTop:'3px'}}>{ev.description}</p>}
-                                    </div>
-                                    {(isOffice?['capo','admin'].includes(role):true) && (
-                                        <div style={{display:'flex',gap:'4px'}}>
-                                            <button onClick={e=>{e.stopPropagation();setEditEvent(ev);setShowNewEvent(true);}} style={{padding:'5px',background:'none',border:'none',cursor:'pointer',color:'rgba(60,60,120,.40)',transition:'color .15s',borderRadius:'6px'}} onMouseEnter={e=>e.currentTarget.style.color='var(--blue)'} onMouseLeave={e=>e.currentTarget.style.color='rgba(60,60,120,.40)'}><i className="ph ph-pencil" style={{fontSize:'14px'}}></i></button>
-                                            <button onClick={async e=>{e.stopPropagation();if(!confirm(`Eliminare "${ev.title}"?`))return;try{await fetchAPI(`/events/${ev.id}`,{method:'DELETE',headers:authHeaders});loadEvents(activeCalId);}catch(err){alert(err.message);}}} style={{padding:'5px',background:'none',border:'none',cursor:'pointer',color:'rgba(60,60,120,.40)',transition:'color .15s',borderRadius:'6px'}} onMouseEnter={e=>e.currentTarget.style.color='var(--red)'} onMouseLeave={e=>e.currentTarget.style.color='rgba(60,60,120,.40)'}><i className="ph ph-trash" style={{fontSize:'14px'}}></i></button>
-                                        </div>
-                                    )}
-                                </div>
-                            );
-                        })}
-                    </div>
-                )}
-                <button onClick={()=>{setSelectedDate(dateStr);setEditEvent(null);setShowNewEvent(true);}} style={{marginTop:'20px',display:'flex',alignItems:'center',gap:'6px',background:'none',border:'none',cursor:'pointer',color:'var(--blue)',fontSize:'13px',fontWeight:600,fontFamily:'var(--font)',padding:'0',transition:'opacity .18s'}} onMouseEnter={e=>e.currentTarget.style.opacity='.75'} onMouseLeave={e=>e.currentTarget.style.opacity='1'}>
-                    <i className="ph ph-plus-circle" style={{fontSize:'18px'}}></i> Aggiungi Evento
-                </button>
-            </div>
-        );
-    };
-
-    // ── renderAnno ───────────────────────────────────────────
+    // ── renderMese ───────────────────────────────────────────
     const renderAnno = () => {
         const year=currentDate.getFullYear();
         const months=Array.from({length:12},(_,i)=>i);
@@ -1231,7 +1859,8 @@ function Dashboard({ auth, onLogout }) {
                     const fDay=new Date(year,m,1).getDay();
                     const mEvents=events.filter(e=>e.event_date&&e.event_date.startsWith(`${year}-${String(m+1).padStart(2,'0')}`));
                     return (
-                        <div key={m} className="yr-cell" onClick={()=>{setCurrentDate(new Date(year,m,1));setView('Mese');}}>
+                        <div key={m} className="yr-cell"
+                            onClick={()=>{setCurrentDate(new Date(year,m,1));setView('Mese');setNavDir('right');}}>
                             <div style={{fontSize:'11px',fontWeight:700,textTransform:'capitalize',color:'rgba(15,15,40,.75)',marginBottom:'8px',letterSpacing:'-.01em'}}>{mName}</div>
                             <div style={{display:'grid',gridTemplateColumns:'repeat(7,1fr)',gap:'1px'}}>
                                 {['L','M','M','G','V','S','D'].map((d,i)=><div key={i} style={{textAlign:'center',fontSize:'8px',color:'rgba(60,60,120,.40)',fontWeight:600,padding:'1px 0'}}>{d}</div>)}
@@ -1242,9 +1871,23 @@ function Dashboard({ auth, onLogout }) {
                                     const hasTd=ds===todayStr;
                                     const hasEv=mEvents.some(e=>e.event_date&&e.event_date.startsWith(ds));
                                     return (
-                                        <div key={d} style={{textAlign:'center',padding:'1.5px',position:'relative'}}>
-                                            <span style={{fontSize:'8.5px',fontWeight:hasTd?700:400,color:hasTd?'#fff':'rgba(40,40,90,.65)',background:hasTd?'var(--blue)':'transparent',borderRadius:'50%',width:'14px',height:'14px',display:'inline-flex',alignItems:'center',justifyContent:'center'}}>{d}</span>
-                                            {hasEv&&!hasTd&&<span style={{position:'absolute',bottom:'1px',left:'50%',transform:'translateX(-50%)',width:'3px',height:'3px',borderRadius:'50%',background:'var(--blue)',opacity:.7}}></span>}
+                                        <div key={d} style={{textAlign:'center',padding:'1.5px',position:'relative'}}
+                                            onClick={e=>{
+                                                e.stopPropagation();
+                                                setCurrentDate(new Date(ds+'T12:00:00'));
+                                                setView('Giorno');
+                                                setNavDir('right');
+                                            }}>
+                                            <span className="year-day-num"
+                                                style={{
+                                                    fontWeight: hasTd?700:400,
+                                                    color:      hasTd?'#fff':'rgba(40,40,90,.65)',
+                                                    background: hasTd?'var(--blue)':'transparent',
+                                                    borderRadius:'50%',
+                                                }}>
+                                                {d}
+                                            </span>
+                                            {hasEv&&!hasTd&&<span style={{position:'absolute',bottom:'0px',left:'50%',transform:'translateX(-50%)',width:'3px',height:'3px',borderRadius:'50%',background:'var(--blue)',opacity:.7,pointerEvents:'none'}}></span>}
                                         </div>
                                     );
                                 })}
@@ -1257,8 +1900,113 @@ function Dashboard({ auth, onLogout }) {
         );
     };
 
-    const navigate = (dir) => { const nd=new Date(currentDate); if(view==='Mese')nd.setMonth(nd.getMonth()+dir); if(view==='Giorno')nd.setDate(nd.getDate()+dir); if(view==='Anno')nd.setFullYear(nd.getFullYear()+dir); setCurrentDate(nd); };
+    const navigate = (dir) => {
+        setNavDir(dir>0?'right':'left');
+        const nd=new Date(currentDate);
+        if(view==='Mese')  nd.setMonth(nd.getMonth()+dir);
+        if(view==='Giorno')nd.setDate(nd.getDate()+dir);
+        if(view==='Anno')  nd.setFullYear(nd.getFullYear()+dir);
+        setCurrentDate(nd);
+    };
     const calIcon  = (type) => type==='Ufficio' ? 'ph-briefcase' : 'ph-user';
+
+    // ── renderGiorno (enhanced with back button + slide animation) ─
+    const renderGiorno = () => {
+        const dateStr=currentDate.toISOString().split('T')[0];
+        const dayEvents=events.filter(e=>e.event_date&&e.event_date.startsWith(dateStr));
+        const ovIds=getOverlapIds(dayEvents);
+        const todayStr=new Date().toISOString().split('T')[0];
+        const isToday=dateStr===todayStr;
+        const animClass = navDir==='right' ? 'slide-in-right' : 'slide-in-left';
+
+        return (
+            <div className={animClass}>
+                {/* Back to Month button */}
+                <button className="dv-back-btn" onClick={()=>{ setNavDir('left'); setView('Mese'); }}>
+                    <i className="ph ph-caret-left" style={{fontSize:'13px'}}></i>
+                    Torna al mese
+                </button>
+
+                <div className="glass-lg" style={{borderRadius:'20px',padding:'24px',minHeight:'420px'}}>
+                    {/* Date header */}
+                    <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:'20px',paddingBottom:'16px',borderBottom:'1px solid rgba(255,255,255,0.32)'}}>
+                        <div>
+                            <div style={{fontSize:'22px',fontWeight:700,color:'rgba(15,15,40,.85)',letterSpacing:'-.03em',textTransform:'capitalize'}}>
+                                {currentDate.toLocaleDateString('it-IT',{weekday:'long',day:'numeric',month:'long'})}
+                            </div>
+                            <div style={{fontSize:'13px',color:'rgba(60,60,120,.48)',marginTop:'2px',letterSpacing:'-.01em'}}>
+                                {currentDate.getFullYear()}
+                                {isToday && <span style={{marginLeft:'10px',fontSize:'11px',fontWeight:700,background:'linear-gradient(135deg,rgba(10,132,255,0.15),rgba(94,92,230,0.12))',border:'1px solid rgba(10,132,255,0.28)',color:'var(--blue)',padding:'2px 10px',borderRadius:'20px'}}>Oggi</span>}
+                            </div>
+                        </div>
+                        <div style={{display:'flex',alignItems:'center',gap:'8px'}}>
+                            <span style={{fontSize:'12px',color:'rgba(60,60,120,.45)',fontWeight:600}}>
+                                {dayEvents.length} {dayEvents.length===1?'evento':'eventi'}
+                            </span>
+                        </div>
+                    </div>
+
+                    {/* Events list */}
+                    {dayEvents.length===0 ? (
+                        <div style={{textAlign:'center',padding:'60px 0',color:'rgba(60,60,120,.35)'}}>
+                            <i className="ph ph-sun-horizon" style={{fontSize:'40px',display:'block',marginBottom:'12px',opacity:.6}}></i>
+                            <p style={{fontSize:'14px',fontStyle:'italic'}}>Nessun evento per questa giornata</p>
+                            <p style={{fontSize:'12px',marginTop:'4px',opacity:.7}}>Clicca il pulsante sotto per aggiungere uno</p>
+                        </div>
+                    ) : (
+                        <div style={{display:'flex',flexDirection:'column',gap:'8px'}}>
+                            {dayEvents
+                                .sort((a,b)=>{
+                                    const aT=(a.start_time||a.event_time||'99:99').substring(0,5);
+                                    const bT=(b.start_time||b.event_time||'99:99').substring(0,5);
+                                    return aT<bT?-1:1;
+                                })
+                                .map(ev=>{
+                                    const k=`${ev.id}-${ev.source}`;
+                                    const isOvlp=ovIds.has(k);
+                                    const isOffice=ev.source==='office';
+                                    const startT=ev.start_time||ev.event_time;
+                                    const endT=ev.end_time||ev.event_end_time;
+                                    const barColor=isOvlp?'var(--red)':isOffice?'var(--amber)':'var(--blue)';
+                                    const bgColor=isOvlp?'rgba(255,69,58,0.06)':isOffice?'rgba(255,159,10,0.06)':'rgba(10,132,255,0.05)';
+                                    return (
+                                        <div key={k} className="drow" style={{display:'flex',gap:'12px',alignItems:'flex-start',borderLeft:`3px solid ${barColor}`,background:`linear-gradient(90deg,${bgColor},rgba(255,255,255,0.18))`}}>
+                                            <div style={{width:'80px',flexShrink:0,fontSize:'12px',fontWeight:600,color:barColor,lineHeight:1.5,paddingTop:'1px'}}>
+                                                {startT
+                                                    ? <>{startT.substring(0,5)}{endT&&<><br/><span style={{fontSize:'10px',opacity:.7}}>–{endT.substring(0,5)}</span></>}</>
+                                                    : <span style={{fontSize:'11px',fontStyle:'italic',opacity:.7}}>Tutto il giorno</span>}
+                                            </div>
+                                            <div style={{flex:1,minWidth:0}}>
+                                                <div style={{display:'flex',alignItems:'center',gap:'7px',flexWrap:'wrap'}}>
+                                                    <span style={{fontSize:'14px',fontWeight:600,color:'rgba(15,15,40,.85)'}}>{ev.title}</span>
+                                                    {isOffice&&<span style={{fontSize:'10px',fontWeight:700,background:'rgba(255,159,10,0.14)',border:'1px solid rgba(255,159,10,0.25)',color:'rgba(140,70,0,.85)',padding:'1px 8px',borderRadius:'6px',letterSpacing:'.01em'}}>Ufficio</span>}
+                                                    {isOvlp&&<span style={{fontSize:'10px',fontWeight:700,background:'rgba(255,69,58,0.12)',border:'1px solid rgba(255,69,58,0.25)',color:'var(--red)',padding:'1px 8px',borderRadius:'6px'}}>⚠ Sovrapposizione</span>}
+                                                </div>
+                                                {ev.description&&<p style={{fontSize:'12px',color:'rgba(60,60,120,.50)',marginTop:'4px',lineHeight:1.5}}>{ev.description}</p>}
+                                            </div>
+                                            {(isOffice?['capo','admin'].includes(role):true) && (
+                                                <div style={{display:'flex',gap:'2px',flexShrink:0}}>
+                                                    <button onClick={e=>{e.stopPropagation();setEditEvent(ev);setShowNewEvent(true);}} style={{padding:'6px',background:'none',border:'none',cursor:'pointer',color:'rgba(60,60,120,.40)',transition:'color .15s',borderRadius:'7px'}} onMouseEnter={e=>e.currentTarget.style.color='var(--blue)'} onMouseLeave={e=>e.currentTarget.style.color='rgba(60,60,120,.40)'}><i className="ph ph-pencil" style={{fontSize:'14px'}}></i></button>
+                                                    <button onClick={async e=>{e.stopPropagation();const ok=await toast.confirm({title:`Elimina evento`,message:`Eliminare "${ev.title}"? Questa azione non può essere annullata.`,variant:'danger',confirmLabel:'Elimina',cancelLabel:'Annulla'});if(!ok)return;try{await fetchAPI(`/events/${ev.id}`,{method:'DELETE',headers:authHeaders});toast.success(`"${ev.title}" eliminato.`,'Evento eliminato');loadEvents(activeCalId);}catch(err){toast.error(err.message,'Errore');}}} style={{padding:'6px',background:'none',border:'none',cursor:'pointer',color:'rgba(60,60,120,.40)',transition:'color .15s',borderRadius:'7px'}} onMouseEnter={e=>e.currentTarget.style.color='var(--red)'} onMouseLeave={e=>e.currentTarget.style.color='rgba(60,60,120,.40)'}><i className="ph ph-trash" style={{fontSize:'14px'}}></i></button>
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })}
+                        </div>
+                    )}
+
+                    {/* Add event button */}
+                    {canEdit && (
+                        <button onClick={()=>{setSelectedDate(dateStr);setEditEvent(null);setShowNewEvent(true);}} style={{marginTop:'20px',display:'flex',alignItems:'center',gap:'7px',background:'rgba(10,132,255,0.10)',border:'1px solid rgba(10,132,255,0.22)',borderRadius:'12px',padding:'9px 16px',cursor:'pointer',color:'var(--blue)',fontSize:'13px',fontWeight:600,fontFamily:'var(--font)',transition:'all .18s'}} onMouseEnter={e=>{e.currentTarget.style.background='rgba(10,132,255,0.17)';e.currentTarget.style.transform='translateY(-1px)';}} onMouseLeave={e=>{e.currentTarget.style.background='rgba(10,132,255,0.10)';e.currentTarget.style.transform='none';}}>
+                            <i className="ph ph-plus-circle" style={{fontSize:'17px'}}></i>
+                            Aggiungi Evento
+                        </button>
+                    )}
+                </div>
+            </div>
+        );
+    };
 
     return (
         <div style={{display:'flex',height:'100vh',overflow:'hidden'}}>
@@ -1386,9 +2134,13 @@ function Dashboard({ auth, onLogout }) {
                             userRole={role}
                             onEditEvent={ev=>{setEditEvent(ev);setShowNewEvent(true);}}
                             onDeleteEvent={async ev=>{
-                                if(!confirm(`Eliminare "${ev.title}"?`))return;
-                                try{await fetchAPI(`/events/${ev.id}`,{method:'DELETE',headers:authHeaders});loadEvents(activeCalId);}
-                                catch(err){alert(err.message);}
+                                const ok = await toast.confirm({ title:`Elimina evento`, message:`Eliminare "${ev.title}"? Questa azione non può essere annullata.`, variant:'danger', confirmLabel:'Elimina', cancelLabel:'Annulla' });
+                                if (!ok) return;
+                                try {
+                                    await fetchAPI(`/events/${ev.id}`,{method:'DELETE',headers:authHeaders});
+                                    toast.success(`"${ev.title}" eliminato.`, 'Evento eliminato');
+                                    loadEvents(activeCalId);
+                                } catch(err) { toast.error(err.message, 'Errore'); }
                             }}
                         />
                     )}
