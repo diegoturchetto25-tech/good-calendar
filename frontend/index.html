@@ -20,8 +20,8 @@
 
 <script type="text/babel">
 const { useState, useEffect, useCallback } = React;
-
-const API_BASE = 'http://ec2-3-250-134-145.eu-west-1.compute.amazonaws.com:5000/api';
+// Change the link to point at the correct instance of the DB
+const API_BASE = 'http://ec2-108-130-225-35.eu-west-1.compute.amazonaws.com:5000/api';
 
 async function fetchAPI(endpoint, options = {}) {
     const res = await fetch(`${API_BASE}${endpoint}`, {
