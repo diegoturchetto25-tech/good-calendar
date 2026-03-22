@@ -1,26 +1,5 @@
 services:
 
-  db:
-    image: mysql:8.0
-    container_name: calendar_db
-    restart: unless-stopped
-    environment:
-      MYSQL_ROOT_PASSWORD: root_password
-      MYSQL_DATABASE: calendar_app
-      MYSQL_USER: calendar_user
-      MYSQL_PASSWORD: calendar_password
-    volumes:
-      - mysql_data:/var/lib/mysql
-      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
-    ports:
-      - "3306:3306"
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "calendar_user", "--password=calendar_password"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 30s
-
   backend:
     build:
       context: ./backend
@@ -28,17 +7,15 @@ services:
     container_name: calendar_backend
     restart: unless-stopped
     environment:
-      DB_HOST: db
-      DB_USER: calendar_user
-      DB_PASSWORD: calendar_password
-      DB_NAME: calendar_app
+      # DB_HOST must now be the Private IP of the Ubuntu machine hosting the DB (or RDS Endpoint)
+      DB_HOST: ${DB_HOST} 
+      DB_USER: ${DB_USER:-calendar_user}
+      DB_PASSWORD: ${DB_PASSWORD:-calendar_password}
+      DB_NAME: ${DB_NAME:-calendar_app}
       JWT_SECRET: ${JWT_SECRET:-change_this_in_production_2026}
       PORT: 5000
     ports:
       - "5000:5000"
-    depends_on:
-      db:
-        condition: service_healthy
 
   frontend:
     image: nginx:alpine
@@ -50,7 +27,3 @@ services:
       - ./frontend/index.html:/usr/share/nginx/html/index.html:ro
     depends_on:
       - backend
-
-volumes:
-  mysql_data:
-    driver: local
